@@ -1,0 +1,7 @@
+<div class="card answer">
+    <strong>Answer</strong>
+    <p>{{ answer }}</p>
+    {% if sources %}
+    <small>From your notes: {{ sources | join(", ") }}</small>
+    {% endif %}
+</div>

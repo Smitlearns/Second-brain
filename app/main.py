@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from app import database
+from app import ai, database
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -42,6 +42,16 @@ def add_from_form(request: Request, title: str = Form(...), body: str = Form(...
         request, "notes_list.html", {"notes": database.get_notes()}
     )
 
+@app.post("/ask")
+def ask(request: Request, question: str = Form(...)):
+    try:
+        answer, sources = ai.ask_brain(question)
+    except Exception:
+        answer = "I couldn't reach the AI model. Is Ollama running, and did you download the model?"
+        sources = []
+    return templates.TemplateResponse(
+        request, "answer.html", {"answer": answer, "sources": sources}
+    )
 
 @app.post("/delete/{note_id}")
 def delete_from_form(note_id: int):

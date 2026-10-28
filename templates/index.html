@@ -13,6 +13,13 @@
     <main>
         <h1>Second Brain</h1>
 
+        <form class="card" hx-post="/ask" hx-target="#answer" hx-indicator="#thinking">
+            <input type="text" name="question" placeholder="Ask your brain..." required>
+            <button type="submit">Ask</button>
+            <span id="thinking" class="htmx-indicator">Thinking...</span>
+        </form>
+        <div id="answer"></div>
+
         <form class="card" hx-post="/add" hx-target="#notes"
             hx-on::after-request="this.reset(); document.getElementById('q').value = ''">
             <input type="text" name="title" placeholder="Title" required>
