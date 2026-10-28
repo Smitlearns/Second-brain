@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ask - Second Brain</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+
+<body>
+    <main>
+        {% include "nav.html" %}
+        <h1>Ask your brain</h1>
+        <p class="empty">Answers use the notes you saved.</p>
+
+        <form class="card" hx-post="/ask" hx-target="#answer" hx-indicator="#thinking">
+            <input type="text" name="question" placeholder="Ask your doubt..." required>
+            <button type="submit">Ask</button>
+            <span id="thinking" class="htmx-indicator">Thinking...</span>
+        </form>
+
+        <div id="answer"></div>
+    </main>
+</body>
+
+</html>

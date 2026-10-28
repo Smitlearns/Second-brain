@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes - Second Brain</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <main>
+        {% include "nav.html" %}
+        <h1>Notes</h1>
+
+        {% if saved %}<p class="saved">Note saved</p>{% endif %}
+
+        <form action="{{ url_for('add') }}" method="post" class="card">
+            <input type="text" name="title" placeholder="Title" required>
+            <textarea name="body" placeholder="Write your note..." rows="6" required></textarea>
+            <button type="submit">Save note</button>
+        </form>
+
+        <a href="{{ url_for('export') }}">Download all notes as Markdown</a>
+    </main>
+</body>
+
+</html>
