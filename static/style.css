@@ -62,3 +62,16 @@ small, .empty { color: #8a90a0; }
 .answer p { margin: 0; white-space: pre-wrap; }
 .answer strong { color: #4f7cff; }
 #thinking { color: #8a90a0; }
+
+/* Navigation and dashboard */
+.nav { display: flex; gap: 16px; margin-bottom: 20px; }
+.nav a { color: #8a90a0; text-decoration: none; }
+.nav a:hover { color: #e6e6e6; }
+.wide { max-width: 900px; }
+iframe {
+  width: 100%;
+  height: 75vh;
+  border: 1px solid #333846;
+  border-radius: 10px;
+  background: #12141a;
+}

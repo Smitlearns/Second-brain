@@ -1,8 +1,8 @@
-from flask import Flask, Response, redirect, render_template_string, request
+from flask import Flask, Response, redirect, render_template_string, request, url_for
 
 from app import database
 
-flask_app = Flask(__name__)
+flask_app = Flask(__name__, template_folder="templates")
 database.init_db()
 
 PAGE = """
@@ -16,16 +16,17 @@ PAGE = """
 </head>
 <body>
   <main>
+    {% include "nav.html" %}
     <h1>Quick Capture</h1>
     <p class="empty">{{ count }} notes saved</p>
 
-    <form action="/add" method="post" class="card">
+    <form action="{{ url_for('add') }}" method="post" class="card">
       <input type="text" name="title" placeholder="Title" required>
       <textarea name="body" placeholder="Write your note..." rows="4" required></textarea>
       <button type="submit">Save note</button>
     </form>
 
-    <a href="/export">Download all notes as Markdown</a>
+    <a href="{{ url_for('export') }}">Download all notes as Markdown</a>
   </main>
 </body>
 </html>
@@ -40,7 +41,7 @@ def home():
 @flask_app.route("/add", methods=["POST"])
 def add():
     database.add_note(request.form["title"], request.form["body"])
-    return redirect("/")
+    return redirect(url_for("home"))
 
 
 @flask_app.route("/export")

@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from a2wsgi import WSGIMiddleware
+from flask_app import flask_app
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -12,6 +14,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+app.mount("/capture", WSGIMiddleware(flask_app))
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 database.init_db()
@@ -27,6 +30,10 @@ def home(request: Request):
     return templates.TemplateResponse(
         request, "index.html", {"notes": database.get_notes()}
     )
+
+@app.get("/dashboard")
+def dashboard(request: Request):
+    return templates.TemplateResponse(request, "dashboard.html", {})
 
 
 @app.get("/partials/notes")
