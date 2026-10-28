@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Second Brain</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+
+<body>
+    <main>
+        <h1>Second Brain</h1>
+
+        <form class="card" hx-post="/add" hx-target="#notes"
+            hx-on::after-request="this.reset(); document.getElementById('q').value = ''">
+            <input type="text" name="title" placeholder="Title" required>
+            <textarea name="body" placeholder="Write your note..." rows="4" required></textarea>
+            <button type="submit">Save note</button>
+        </form>
+
+        <form class="search" hx-get="/partials/notes" hx-trigger="submit, input delay:300ms" hx-target="#notes">
+            <input id="q" type="search" name="q" placeholder="Search notes...">
+            <button type="submit">Search</button>
+        </form>
+
+        <div id="notes">
+            {% include "notes_list.html" %}
+        </div>
+    </main>
+</body>
+
+</html>
