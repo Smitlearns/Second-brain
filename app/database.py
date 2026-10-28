@@ -51,3 +51,16 @@ def delete_note(note_id):
     with get_connection() as conn:
         cursor = conn.execute("DELETE FROM notes WHERE id = ?", (note_id,))
         return cursor.rowcount > 0
+
+def get_note(note_id):
+    with get_connection() as conn:
+        row = conn.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone()
+        return dict(row) if row else None
+
+def update_note(note_id, title, body):
+    with get_connection() as conn:
+        cursor = conn.execute(
+            "UPDATE notes SET title = ?, body = ? WHERE id = ?",
+            (title, body, note_id),
+        )
+        return cursor.rowcount > 0

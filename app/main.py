@@ -2,7 +2,7 @@ from pathlib import Path
 
 from a2wsgi import WSGIMiddleware
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -19,6 +19,9 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 database.init_db()
 
+# The chat is kept in memory while the server runs (it resets when the server restarts)
+chat_history = []
+
 
 # ---------- Pages ----------
 
@@ -29,7 +32,7 @@ def root():
 
 @app.get("/fastapi")
 def ask_page(request: Request):
-    return templates.TemplateResponse(request, "ask.html", {})
+    return templates.TemplateResponse(request, "ask.html", {"history": chat_history})
 
 
 @app.get("/dashboard")
@@ -37,18 +40,30 @@ def dashboard(request: Request):
     return templates.TemplateResponse(request, "dashboard.html", {})
 
 
-# ---------- The AI route used by the Ask page ----------
+# ---------- Chat routes used by the Ask page ----------
 
 @app.post("/ask")
 def ask(request: Request, question: str = Form(...)):
     try:
-        answer, sources = ai.ask_brain(question)
+        # only the last 4 messages go to the AI, to keep answers quick
+        answer, sources = ai.ask_brain(question, chat_history[-4:])
     except Exception:
-        answer = "I couldn't reach the AI model. Is Ollama running, and did you download the model?"
-        sources = []
-    return templates.TemplateResponse(
-        request, "answer.html", {"answer": answer, "sources": sources}
-    )
+        error = {
+            "role": "assistant",
+            "content": "I couldn't reach the AI model. Is Ollama running, and did you download the model?",
+            "sources": [],
+        }
+        return templates.TemplateResponse(request, "bubble.html", {"m": error})
+
+    chat_history.append({"role": "user", "content": question})
+    chat_history.append({"role": "assistant", "content": answer, "sources": sources})
+    return templates.TemplateResponse(request, "bubble.html", {"m": chat_history[-1]})
+
+
+@app.post("/clear")
+def clear_chat():
+    chat_history.clear()
+    return HTMLResponse("")
 
 
 # ---------- JSON API (still available at /docs) ----------

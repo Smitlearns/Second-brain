@@ -1,0 +1,2 @@
+{% if m.role == "user" %}<div class="msg user">{{ m.content }}</div>{% else %}<div class="msg bot">{{ m.content }}{% if
+    m.sources %}<small>From your notes: {{ m.sources | join(", ") }}</small>{% endif %}</div>{% endif %}

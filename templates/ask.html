@@ -7,21 +7,29 @@
     <title>Ask - Second Brain</title>
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="/static/script.js"></script>
 </head>
 
 <body>
     <main>
         {% include "nav.html" %}
-        <h1>Ask your brain</h1>
-        <p class="empty">Answers use the notes you saved.</p>
 
-        <form class="card" hx-post="/ask" hx-target="#answer" hx-indicator="#thinking">
-            <input type="text" name="question" placeholder="Ask your doubt..." required>
-            <button type="submit">Ask</button>
-            <span id="thinking" class="htmx-indicator">Thinking...</span>
+        <div class="chat-top">
+            <h1>Ask your brain</h1>
+            <button class="secondary" hx-post="/clear" hx-target="#chat" hx-swap="innerHTML"
+                hx-confirm="Clear this chat?">Clear chat</button>
+        </div>
+
+        <div id="chat">
+            {% for m in history %}{% include "bubble.html" %}{% endfor %}
+        </div>
+        <div id="thinking" class="htmx-indicator">Thinking...</div>
+
+        <form class="chat-form" hx-post="/ask" hx-target="#chat" hx-swap="beforeend" hx-indicator="#thinking"
+            hx-disabled-elt="find button" hx-on::before-request="addUserBubble(this)">
+            <input type="text" name="question" placeholder="Ask your doubt..." autocomplete="off" required autofocus>
+            <button type="submit">Send</button>
         </form>
-
-        <div id="answer"></div>
     </main>
 </body>
 

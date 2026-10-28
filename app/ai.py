@@ -30,8 +30,13 @@ def find_relevant_notes(question, limit=3):
     return [note for _, note in scored[:limit]]
 
 
-def ask_brain(question):
-    notes = find_relevant_notes(question)
+def ask_brain(question, history=None):
+    history = history or []
+
+    # Include the previous question so follow-ups like "explain more" still find the right notes
+    last_user = next((m["content"] for m in reversed(history) if m["role"] == "user"), "")
+    notes = find_relevant_notes(question + " " + last_user)
+
     if notes:
         context = "\n\n".join(f"Title: {n['title']}\n{n['body']}" for n in notes)
     else:
@@ -46,12 +51,14 @@ def ask_brain(question):
         "NOTES:\n" + context
     )
 
+    messages = [{"role": "system", "content": system_prompt}]
+    for m in history:
+        messages.append({"role": m["role"], "content": m["content"]})
+    messages.append({"role": "user", "content": question})
+
     response = ollama.chat(
         model=MODEL,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": question},
-        ],
+        messages=messages,
         keep_alive="2m",  # unload the model from RAM 2 minutes after the last question
         options={"num_predict": 200},  # stop after about 200 tokens
     )
