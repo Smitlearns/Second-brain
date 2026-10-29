@@ -61,7 +61,7 @@ export default function NotePage() {
 
   return (
     <main className="note-page">
-      <button type="button" className="link" onClick={back}><ArrowLeft size={16} aria-hidden /> Back to all notes</button>
+      <button type="button" className="link" onClick={back}><ArrowLeft size={16} /> Back to all notes</button>
 
       {editing ? (
         <>
@@ -78,21 +78,21 @@ export default function NotePage() {
         <>
           <small className="eyebrow with-icon">
             <KindIcon kind={note.kind} size={13} /> {KINDS[note.kind].label}
-            {note.pinned && <><span aria-hidden>·</span><Pin size={13} aria-hidden /> Pinned</>}
+            {note.pinned && <><span aria-hidden>·</span><Pin size={13} /> Pinned</>}
           </small>
           <NoteBody note={note} onChange={setNote} />
           <Tags tags={note.tags} />
           <small>Saved {fullDate(note.created_at)}</small>
 
           <div className="buttons note-actions">
-            <button type="button" onClick={askAbout}><MessageCircle size={16} aria-hidden /> Ask about this note</button>
+            <button type="button" onClick={askAbout}><MessageCircle size={16} /> Ask about this note</button>
             <button type="button" className="secondary" onClick={() => setEditing(fieldsFrom(note))}>
-              <Pencil size={15} aria-hidden /> Edit
+              <Pencil size={15} /> Edit
             </button>
             <button type="button" className="secondary" onClick={() => api.setPinned(id, !note.pinned).then(setNote)}>
-              {note.pinned ? <><PinOff size={15} aria-hidden /> Unpin</> : <><Pin size={15} aria-hidden /> Pin</>}
+              {note.pinned ? <><PinOff size={15} /> Unpin</> : <><Pin size={15} /> Pin</>}
             </button>
-            <button type="button" className="delete" onClick={remove}><Trash2 size={15} aria-hidden /> Delete</button>
+            <button type="button" className="delete" onClick={remove}><Trash2 size={15} /> Delete</button>
           </div>
 
           {related.length > 0 && (

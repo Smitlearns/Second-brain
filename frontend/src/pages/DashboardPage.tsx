@@ -3,33 +3,34 @@ import { Link, useSearchParams } from "react-router-dom";
 import * as api from "../api";
 import type { Note, Stats } from "../api";
 import {
-  AlarmClock, CalendarDays, CircleCheck, CodeXml, FileText, LayoutGrid, Lightbulb, Map as MapIcon, MessageSquare,
+  AlarmClock, CalendarDays, CircleCheck, FileText, LayoutGrid, MessageSquare,
   Network, Pin, Plus, Sparkles, type LucideIcon,
 } from "lucide-react";
 import { CodeBlock, NoteCard, noteLink, Progress, Steps, Tags } from "../components/bits";
-import { KindIcon, NoteLabel } from "../components/icons";
+import { KIND_ICONS, KindIcon, NoteLabel } from "../components/icons";
 // the graph library is big, so it only loads when the Graph section is opened
 const Graph = lazy(() => import("../components/Graph"));
 import { codeLanguage, deadlineText, DUE_SOON_DAYS, duePlans, KIND_LIST, KINDS, planProgress, preview } from "../notes";
 
-const SECTIONS: Record<string, [string, LucideIcon]> = {
+const SECTIONS = {
   all: ["All", LayoutGrid],
-  notes: ["Notes", FileText],
-  ideas: ["Ideas", Lightbulb],
-  plans: ["Plans", MapIcon],
-  code: ["Code", CodeXml],
+  notes: ["Notes", KIND_ICONS.note],
+  ideas: ["Ideas", KIND_ICONS.idea],
+  plans: ["Plans", KIND_ICONS.plan],
+  code: ["Code", KIND_ICONS.code],
   graph: ["Graph", Network],
-};
+} satisfies Record<string, [string, LucideIcon]>;
 type Section = keyof typeof SECTIONS;
 
 /** Every note, with a section per type. The section is kept in the URL, so "Back" returns to it. */
 export default function DashboardPage() {
   const [params, setParams] = useSearchParams();
   const asked = params.get("section") ?? "";
-  const section: Section = asked in SECTIONS ? (asked as Section) : "all";
+  const section: Section = Object.hasOwn(SECTIONS, asked) ? (asked as Section) : "all";
   const [notes, setNotes] = useState<Note[] | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [failed, setFailed] = useState(false);
+  const greeting = useGreeting();
 
   function reload() {
     api.getNotes().then(setNotes, () => setFailed(true));
@@ -48,10 +49,10 @@ export default function DashboardPage() {
     <main className="wide">
       <header className="page-head">
         <div>
-          <p className="eyebrow">{greeting()}</p>
+          <p className="eyebrow">{greeting}</p>
           <h1>Your second brain</h1>
         </div>
-        <Link to="/" className="button"><Plus size={16} aria-hidden /> New note</Link>
+        <Link to="/" className="button"><Plus size={16} /> New note</Link>
       </header>
       {stats && <CommandCenter notes={notes} stats={stats} />}
       <DueSoon notes={notes} />
@@ -63,7 +64,7 @@ export default function DashboardPage() {
             <button key={s} type="button" role="tab" aria-selected={s === section}
               className={s === section ? "pill active" : "pill"}
               onClick={() => setParams(s === "all" ? {} : { section: s }, { replace: true })}>
-              <Icon size={15} aria-hidden /> {label}
+              <Icon size={15} /> {label}
             </button>
           );
         })}
@@ -79,9 +80,19 @@ export default function DashboardPage() {
   );
 }
 
-function greeting() {
+function greetingNow() {
   const hour = new Date().getHours();
   return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+}
+
+/** The greeting, checked every minute so a tab left open overnight catches up. */
+function useGreeting() {
+  const [greeting, setGreeting] = useState(greetingNow);
+  useEffect(() => {
+    const timer = setInterval(() => setGreeting(greetingNow()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+  return greeting;
 }
 
 interface SectionProps {
@@ -108,7 +119,7 @@ function CommandCenter({ notes, stats }: { notes: Note[]; stats: Stats }) {
       <div className="metrics">
         {metrics.map(([label, value, Icon]) => (
           <div key={label} className="metric">
-            <small className="with-icon"><Icon size={14} aria-hidden /> {label}</small>
+            <small className="with-icon"><Icon size={14} /> {label}</small>
             <strong>{value}</strong>
           </div>
         ))}
@@ -134,7 +145,7 @@ function DueSoon({ notes }: { notes: Note[] }) {
   if (!due.length) return null;
   return (
     <section className="card due-soon" aria-label="Plans due soon">
-      <strong className="with-icon"><AlarmClock size={16} aria-hidden /> Due in the next {DUE_SOON_DAYS} days or overdue</strong>
+      <strong className="with-icon"><AlarmClock size={16} /> Due in the next {DUE_SOON_DAYS} days or overdue</strong>
       <ul>
         {due.map((n) => {
           const text = deadlineText(n);
@@ -254,7 +265,7 @@ function Plans({ notes, replaceNote }: SectionProps) {
         return (
           <article key={n.id} className="card kind-plan">
             <Link to={noteLink(n.id)} className="card-title">
-              <NoteLabel note={n} />{total > 0 && done === total && <CircleCheck size={16} className="done-check" aria-label="Done" />}
+              <NoteLabel note={n} />{total > 0 && done === total && <CircleCheck size={16} className="done-check" role="img" aria-label="Done" />}
             </Link>
             {total > 0 && <Progress done={done} total={total} text={`${done}/${total} steps done`} />}
             {due && <small className={due.startsWith("overdue") ? "error" : undefined}>{due}</small>}

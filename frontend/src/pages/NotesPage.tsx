@@ -73,7 +73,7 @@ export default function NotesPage() {
           return (
             <button key={k} type="button" role="tab" aria-selected={k === kind}
               className={k === kind ? "pill active" : "pill"} onClick={() => pickKind(k)}>
-              <Icon size={15} aria-hidden /> {KINDS[k].label}
+              <Icon size={15} /> {KINDS[k].label}
             </button>
           );
         })}
@@ -82,7 +82,7 @@ export default function NotesPage() {
       <NoteForm fields={{ ...fields, kind }} onChange={setFields} onSubmit={save} submitLabel={SAVE_LABELS[kind]} />
 
       <form onSubmit={importAll} className="card">
-        <strong className="with-icon"><Upload size={16} aria-hidden /> Import files</strong>
+        <strong className="with-icon"><Upload size={16} /> Import files</strong>
         <small>.txt, .md or .pdf. Long files are split into several notes. Markdown is split at each
           "# Heading", so a file from "Download all notes" imports back.</small>
         <input type="file" name="files" accept=".txt,.md,.pdf" multiple required />
@@ -91,7 +91,7 @@ export default function NotesPage() {
         </div>
       </form>
 
-      <a href={EXPORT_URL} className="with-icon"><Download size={16} aria-hidden /> Download all notes as Markdown</a>
+      <a href={EXPORT_URL} className="with-icon"><Download size={16} /> Download all notes as Markdown</a>
     </main>
   );
 }

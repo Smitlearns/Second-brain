@@ -118,10 +118,10 @@ export default function AskPage() {
     <main className="wide">
       <div className="chat-layout">
         <aside className="chat-list">
-          <button type="button" className="new-chat" onClick={startChat}><Plus size={16} aria-hidden /> New chat</button>
+          <button type="button" className="new-chat" onClick={startChat}><Plus size={16} /> New chat</button>
           {chats.map((c) => (
             <Link key={c.id} to={`/ask/${c.id}`} className={c.id === chatId ? "active" : undefined} title={c.title}>
-              <MessageSquare size={14} aria-hidden /><span>{c.title}</span>
+              <MessageSquare size={14} /><span>{c.title}</span>
             </Link>
           ))}
         </aside>
@@ -129,8 +129,8 @@ export default function AskPage() {
         <section className="chat-main">
           <div className="chat-top">
             <h1>Ask your brain</h1>
-            <button type="button" className="icon-button" onClick={removeChat} aria-label="Delete chat" title="Delete chat">
-              <Trash2 size={16} aria-hidden />
+            <button type="button" className="icon-button danger" onClick={removeChat} aria-label="Delete chat" title="Delete chat">
+              <Trash2 size={16} />
             </button>
           </div>
 
@@ -149,7 +149,7 @@ export default function AskPage() {
             ))}
             {!messages.length && (
               <div className="chat-empty">
-                <span className="chat-empty-icon"><Sparkles size={22} aria-hidden /></span>
+                <span className="chat-empty-icon"><Sparkles size={22} /></span>
                 <strong>Ask anything</strong>
                 <small>Answers come from the notes you saved.</small>
               </div>
@@ -169,7 +169,7 @@ export default function AskPage() {
           <form className="chat-form" onSubmit={submit}>
             <input ref={input} type="text" value={question} onChange={(e) => setQuestion(e.target.value)}
               placeholder="Ask your doubt..." aria-label="Your question" autoComplete="off" required autoFocus />
-            <button type="submit" disabled={busy} aria-label="Send" title="Send"><Send size={16} aria-hidden /></button>
+            <button type="submit" disabled={busy} aria-label="Send" title="Send"><Send size={16} /></button>
           </form>
         </section>
       </div>

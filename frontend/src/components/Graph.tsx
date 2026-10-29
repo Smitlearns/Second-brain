@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { DataSet } from "vis-data";
 import { Network } from "vis-network";
 import { getLinks, type Kind, type Link, type Note } from "../api";
+import { KIND_LIST } from "../notes";
 import { themeColor, useTheme } from "../theme";
 import { noteLink } from "./bits";
 
@@ -23,11 +24,12 @@ export default function Graph({ notes }: { notes: Note[] }) {
 
   useEffect(() => {
     if (!box.current || !links) return;
+    const colors = Object.fromEntries(KIND_LIST.map((k) => [k, themeColor(KIND_COLORS[k])])) as Record<Kind, string>;
     const nodes = new DataSet(notes.map((n) => ({
       id: n.id,
       label: n.title.slice(0, 30),
       title: `${n.title}\n${n.tags.map((t) => "#" + t).join(", ")}`,
-      color: themeColor(KIND_COLORS[n.kind]),
+      color: colors[n.kind],
       size: n.pinned ? 22 : 14,
     })));
     const edges = new DataSet(links.map((l, i) => ({

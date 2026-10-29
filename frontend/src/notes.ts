@@ -72,10 +72,8 @@ export function planFinished(note: Note) {
 
 /** Days until the deadline (negative once it's passed), or null if there's no valid deadline. */
 export function daysLeft(note: Note) {
-  const deadline = note.extra.deadline;
-  if (!deadline) return null;
-  const due = new Date(deadline + "T00:00:00");
-  if (Number.isNaN(due.getTime())) return null;
+  const due = parseDay(note.extra.deadline);
+  if (!due) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return Math.round((due.getTime() - today.getTime()) / 86_400_000);
@@ -112,8 +110,15 @@ export function fullDate(stamp: string) {
 
 /** A YYYY-MM-DD deadline as "2 Oct 2026". */
 export function dayText(day: string) {
+  const date = parseDay(day);
+  return date ? date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : day;
+}
+
+/** A YYYY-MM-DD day as local midnight, or null if it isn't a date. */
+function parseDay(day: string | undefined) {
+  if (!day) return null;
   const date = new Date(day + "T00:00:00");
-  return Number.isNaN(date.getTime()) ? day : date.toLocaleDateString(undefined, { dateStyle: "medium" });
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
@@ -122,7 +127,7 @@ export function deadlineText(note: Note) {
   const deadline = note.extra.deadline;
   if (!deadline || planFinished(note)) return ""; // a finished plan isn't late
   const days = daysLeft(note);
-  if (days === null) return `due ${deadline}`;
+  if (days === null) return `due ${dayText(deadline)}`;
   if (days > 1) return `due in ${days} days`;
   if (days === 1) return "due tomorrow";
   if (days === 0) return "due today";

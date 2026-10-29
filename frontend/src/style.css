@@ -146,7 +146,8 @@ button.delete:hover { background: var(--red); color: white; filter: none; }
 button.link { background: none; color: var(--muted); padding: 0; font-weight: 500; }
 button.link:hover { color: var(--text); filter: none; }
 .icon-button { background: none; color: var(--muted); padding: 8px; border-color: var(--line); }
-.icon-button:hover { color: var(--red); filter: none; }
+.icon-button:hover { color: var(--text); filter: none; }
+.icon-button.danger:hover { color: var(--red); }
 .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* Small rounded labels: tags, languages, counts */
@@ -170,6 +171,11 @@ button.link:hover { color: var(--text); filter: none; }
 .k-idea { --k: var(--yellow); }
 .k-plan { --k: var(--green); }
 .k-code { --k: var(--purple); }
+/* ...and as a stripe down the left of its cards and form */
+.kind-note, .form-note { border-left: 4px solid var(--blue); }
+.kind-idea, .form-idea { border-left: 4px solid var(--yellow); }
+.kind-plan, .form-plan { border-left: 4px solid var(--green); }
+.kind-code, .form-code { border-left: 4px solid var(--purple); }
 .kind-icon {
   display: inline-grid;
   place-items: center;
