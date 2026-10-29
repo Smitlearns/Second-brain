@@ -13,12 +13,31 @@
         {% include "nav.html" %}
         <h1>Notes</h1>
 
-        {% if saved %}<p class="saved">Note saved</p>{% endif %}
+        {% if saved %}<p class="saved">Note saved. <a href="/dashboard">See it in the Dashboard</a></p>{% endif %}
+        {% if imported is not none %}
+        <p class="saved">Imported {{ imported }} note{{ "" if imported == "1" else "s" }}.
+            <a href="/dashboard">See them in the Dashboard</a></p>
+        {% endif %}
+        {% for p in problems %}<p class="error">{{ p }}</p>{% endfor %}
 
         <form action="{{ url_for('add') }}" method="post" class="card">
-            <input type="text" name="title" placeholder="Title" required>
+            <div class="row">
+                <input type="text" name="title" placeholder="Title" required>
+                <select name="kind" aria-label="Type of note">
+                    {% for value, label in kinds.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+            </div>
             <textarea name="body" placeholder="Write your note..." rows="6" required></textarea>
+            <input type="text" name="tags" placeholder="Tags, separated by commas (optional)">
             <button type="submit">Save note</button>
+        </form>
+
+        <form action="{{ url_for('import_files') }}" method="post" enctype="multipart/form-data" class="card">
+            <strong>Import files</strong>
+            <small>.txt, .md or .pdf. Long files are split into several notes. Markdown is split at each
+                "# Heading", so a file from "Download all notes" imports back.</small>
+            <input type="file" name="files" accept=".txt,.md,.pdf" multiple required>
+            <button type="submit">Import</button>
         </form>
 
         <a href="{{ url_for('export') }}">Download all notes as Markdown</a>
