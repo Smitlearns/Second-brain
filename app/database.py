@@ -6,6 +6,7 @@ DB_PATH = Path(__file__).resolve().parent.parent / "data" / "notes.db"
 
 # The kinds of note you can save, and how they are shown
 KINDS = {"note": "📝 Note", "idea": "💡 Idea", "plan": "🗺️ Plan", "code": "💻 Code"}
+LANGUAGES = ["python", "javascript", "typescript", "html", "css", "sql", "bash", "java", "c", "cpp", "other"]
 
 
 def get_connection():
@@ -38,6 +39,8 @@ def init_db():
         _add_column(conn, "notes", "kind", "TEXT NOT NULL DEFAULT 'note'")
         _add_column(conn, "notes", "pinned", "INTEGER NOT NULL DEFAULT 0")
         _add_column(conn, "notes", "embedding", "TEXT")  # filled in by the AI when needed
+        # fields only some types have: plan steps and deadline, code language
+        _add_column(conn, "notes", "extra", "TEXT NOT NULL DEFAULT '{}'")
 
         conn.execute("""
             CREATE TABLE IF NOT EXISTS chats (
@@ -80,12 +83,37 @@ def _note(row):
     note = dict(row)
     note["tags"] = note["tags"].split(",") if note["tags"] else []
     note["pinned"] = bool(note["pinned"])
+    note["extra"] = json.loads(note["extra"])
     note.pop("embedding", None)  # big list of numbers, only the AI needs it
     return note
 
 
 def _kind(kind):
     return kind if kind in KINDS else "note"
+
+
+def make_extra(kind, steps="", deadline="", language="", old_steps=None):
+    """Build the type-specific fields from a form. Steps that were ticked stay ticked after an edit."""
+    if kind == "plan":
+        done = {s["text"] for s in old_steps or [] if s["done"]}
+        lines = [line.strip().lstrip("-*").strip() for line in steps.splitlines()]
+        return {"steps": [{"text": l, "done": l in done} for l in lines if l], "deadline": deadline or ""}
+    if kind == "code":
+        return {"language": language if language in LANGUAGES else "other"}
+    return {}
+
+
+def full_text(note):
+    """Everything worth searching in a note, including plan steps and code language."""
+    extra = note["extra"]
+    parts = [note["body"]]
+    if extra.get("steps"):
+        parts.append("Steps: " + "; ".join(s["text"] for s in extra["steps"]))
+    if extra.get("deadline"):
+        parts.append("Deadline: " + extra["deadline"])
+    if extra.get("language"):
+        parts.append("Language: " + extra["language"])
+    return "\n".join(p for p in parts if p)
 
 
 def get_all_tags():
@@ -97,11 +125,11 @@ def get_all_tags():
 
 # ---------- Notes ----------
 
-def add_note(title, body, tags="", kind="note"):
+def add_note(title, body, tags="", kind="note", extra=None):
     with get_connection() as conn:
         cursor = conn.execute(
-            "INSERT INTO notes (title, body, tags, kind) VALUES (?, ?, ?, ?)",
-            (title, body, clean_tags(tags), _kind(kind)),
+            "INSERT INTO notes (title, body, tags, kind, extra) VALUES (?, ?, ?, ?, ?)",
+            (title, body, clean_tags(tags), _kind(kind), json.dumps(extra or {})),
         )
         return cursor.lastrowid
 
@@ -119,9 +147,9 @@ def search_notes(query):
     with get_connection() as conn:
         like = f"%{query}%"
         rows = conn.execute(
-            "SELECT * FROM notes WHERE title LIKE ? OR body LIKE ? OR tags LIKE ? "
+            "SELECT * FROM notes WHERE title LIKE ? OR body LIKE ? OR tags LIKE ? OR extra LIKE ? "
             "ORDER BY pinned DESC, id DESC",
-            (like, like, like),
+            (like, like, like, like),
         ).fetchall()
         return [_note(row) for row in rows]
 
@@ -138,14 +166,25 @@ def get_note(note_id):
         return _note(row) if row else None
 
 
-def update_note(note_id, title, body, tags="", kind="note"):
+def update_note(note_id, title, body, tags="", kind="note", extra=None):
     with get_connection() as conn:
         # the text changed, so the AI has to work out its meaning again
         cursor = conn.execute(
-            "UPDATE notes SET title = ?, body = ?, tags = ?, kind = ?, embedding = NULL WHERE id = ?",
-            (title, body, clean_tags(tags), _kind(kind), note_id),
+            "UPDATE notes SET title = ?, body = ?, tags = ?, kind = ?, extra = ?, embedding = NULL "
+            "WHERE id = ?",
+            (title, body, clean_tags(tags), _kind(kind), json.dumps(extra or {}), note_id),
         )
         return cursor.rowcount > 0
+
+
+def set_step_done(note_id, index, done):
+    """Tick or untick one step of a plan."""
+    note = get_note(note_id)
+    steps = note["extra"].get("steps", []) if note else []
+    if 0 <= index < len(steps):
+        steps[index]["done"] = done
+        with get_connection() as conn:
+            conn.execute("UPDATE notes SET extra = ? WHERE id = ?", (json.dumps(note["extra"]), note_id))
 
 
 def set_pinned(note_id, pinned):

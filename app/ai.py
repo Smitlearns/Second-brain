@@ -32,7 +32,12 @@ STOPWORDS = {
 
 def _note_text(note):
     # nomic-embed-text works best when told whether text is a document or a question
-    return f"search_document: {note['title']}\n{' '.join(note['tags'])}\n{note['body']}"
+    return f"search_document: {note['title']}\n{' '.join(note['tags'])}\n{database.full_text(note)}"
+
+
+def _for_prompt(note):
+    kind = database.KINDS[note["kind"]].split()[-1]  # "Plan", "Code", ...
+    return f"{kind}: {note['title']}\n{database.full_text(note)}"
 
 
 def ensure_embeddings():
@@ -65,7 +70,7 @@ def _keywords(text):
 
 
 def _keyword_hits(words, note):
-    text = " ".join([note["title"], note["body"], *note["tags"]]).lower()
+    text = " ".join([note["title"], database.full_text(note), *note["tags"]]).lower()
     return sum(1 for w in words if w in text)
 
 
@@ -159,14 +164,14 @@ def prepare(question, history=None, focus_note=None):
         notes = [focus_note] + [n for n in notes if n["id"] != focus_note["id"]][:2]
         system_prompt += (
             "This chat is about ONE note. When the user says \"this note\", they mean this one:\n"
-            f"Title: {focus_note['title']}\n{focus_note['body']}\n\n"
+            f"{_for_prompt(focus_note)}\n\n"
         )
         others = notes[1:]
     else:
         others = notes
 
     if others:
-        context = "\n\n".join(f"Title: {n['title']}\n{n['body']}" for n in others)
+        context = "\n\n".join(_for_prompt(n) for n in others)
     else:
         context = "(no matching notes)"
     system_prompt += ("OTHER NOTES that may help:\n" if focus_note else "NOTES:\n") + context

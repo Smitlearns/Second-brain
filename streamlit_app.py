@@ -1,5 +1,6 @@
 import json
 from collections import Counter
+from datetime import date
 
 import streamlit as st
 
@@ -35,11 +36,151 @@ def ask_link(note_id):
     return f"http://{host}:{FASTAPI_PORT}/ask/note/{note_id}"
 
 
-def show_body(note):
-    if note["kind"] == "code":
-        st.code(note["body"])
+# ---------- How each type of note looks ----------
+
+TITLE_LABELS = {"note": "Title", "idea": "Your idea in one line", "plan": "Goal", "code": "What does this code do?"}
+BODY_LABELS = {"note": "Note", "idea": "Why it matters (optional)", "plan": "Details (optional)", "code": "Code"}
+
+
+def preview(text, length=120):
+    return text[:length] + ("..." if len(text) > length else "")
+
+
+def code_language(note):
+    lang = note["extra"].get("language")
+    return None if lang in (None, "other") else lang
+
+
+def plan_progress(note):
+    steps = note["extra"].get("steps", [])
+    return sum(s["done"] for s in steps), len(steps)
+
+
+def deadline_text(note):
+    deadline = note["extra"].get("deadline")
+    if not deadline:
+        return ""
+    try:
+        days = (date.fromisoformat(deadline) - date.today()).days
+    except ValueError:
+        return f"due {deadline}"
+    if days > 1:
+        return f"due in {days} days"
+    if days == 1:
+        return "due tomorrow"
+    if days == 0:
+        return "due today"
+    return f"overdue by {-days} day{'s' if days < -1 else ''}"
+
+
+def note_card(n):
+    """One note in the list. Each type shows what matters most for it."""
+    with st.container(border=True):
+        label = ("📌 " if n["pinned"] else "") + database.KINDS[n["kind"]].split()[0] + " " + n["title"]
+        st.button(label, key=f"open{n['id']}", on_click=open_note, args=(n["id"],))
+
+        if n["kind"] == "idea":
+            if n["body"]:
+                st.caption("Why it matters: " + preview(n["body"]))
+        elif n["kind"] == "plan":
+            done, total = plan_progress(n)
+            due = deadline_text(n)
+            if total:
+                st.progress(done / total, text=f"{done}/{total} steps done" + (f" · {due}" if due else ""))
+            elif due:
+                st.caption(due)
+        elif n["kind"] == "code":
+            lines = n["body"].splitlines()
+            st.code("\n".join(lines[:4]) + ("\n..." if len(lines) > 4 else ""), language=code_language(n))
+        else:
+            st.caption(preview(n["body"]))
+
+        if n["tags"]:
+            st.caption(" ".join(f"#{t}" for t in n["tags"]))
+        st.caption(n["created_at"])
+
+
+def toggle_step(note_id, index):
+    database.set_step_done(note_id, index, st.session_state[f"step{note_id}_{index}"])
+
+
+def show_note(note):
+    """The full page for one note, laid out for its type."""
+    kind = note["kind"]
+    if kind == "idea":
+        st.markdown(f"## 💡 {note['title']}")
+        if note["body"]:
+            with st.container(border=True):
+                st.markdown("**Why it matters**")
+                st.write(note["body"])
+
+    elif kind == "plan":
+        st.header(note["title"])
+        done, total = plan_progress(note)
+        due = deadline_text(note)
+        cols = st.columns(3)
+        cols[0].metric("Steps done", f"{done}/{total}" if total else "No steps")
+        cols[1].metric("Deadline", note["extra"].get("deadline") or "None")
+        if due:
+            cols[2].metric("Time left", due.replace("due ", "").capitalize())
+        if total:
+            st.progress(done / total)
+            for i, step in enumerate(note["extra"]["steps"]):
+                st.checkbox(step["text"], value=step["done"], key=f"step{note['id']}_{i}",
+                            on_change=toggle_step, args=(note["id"], i))
+        if note["body"]:
+            st.markdown("**Details**")
+            st.write(note["body"])
+
+    elif kind == "code":
+        st.header(note["title"])
+        st.caption(f"Language: {note['extra'].get('language', 'other')}")
+        st.code(note["body"], language=code_language(note), line_numbers=True)
+
     else:
+        st.header(note["title"])
         st.write(note["body"])
+
+
+def edit_form(note):
+    """Edit a note. The fields change with the type picked above the form."""
+    kinds = list(database.KINDS)
+    kind = st.selectbox("Type", kinds, index=kinds.index(note["kind"]), format_func=database.KINDS.get,
+                        key=f"edit_kind_{note['id']}")
+    extra = note["extra"]
+
+    with st.form(f"edit_form_{note['id']}"):
+        new_title = st.text_input(TITLE_LABELS[kind], value=note["title"])
+        steps, deadline, language = "", None, ""
+        if kind == "code":
+            langs = database.LANGUAGES
+            current = extra.get("language", "other")
+            language = st.selectbox("Language", langs, index=langs.index(current) if current in langs else len(langs) - 1)
+        if kind == "plan":
+            steps = st.text_area("Steps, one per line", value="\n".join(s["text"] for s in extra.get("steps", [])))
+            try:
+                old_deadline = date.fromisoformat(extra["deadline"]) if extra.get("deadline") else None
+            except ValueError:
+                old_deadline = None
+            deadline = st.date_input("Deadline (optional)", value=old_deadline)
+        new_body = st.text_area(BODY_LABELS[kind], value=note["body"], height=250 if kind in ("note", "code") else 120)
+        new_tags = st.text_input("Tags, separated by commas", value=", ".join(note["tags"]))
+        save = st.form_submit_button("Save changes")
+        cancel = st.form_submit_button("Cancel")
+
+    if save:
+        # ideas and plans can be saved without a body, notes and code can't
+        if not new_title.strip() or (kind in ("note", "code") and not new_body.strip()):
+            st.error(f"Please fill in the {TITLE_LABELS[kind].lower()} and the {BODY_LABELS[kind].lower()}.")
+        else:
+            new_extra = database.make_extra(kind, steps, deadline.isoformat() if deadline else "", language,
+                                            old_steps=extra.get("steps"))
+            database.update_note(note["id"], new_title.strip(), new_body.strip(), new_tags, kind, new_extra)
+            st.session_state.editing = False
+            st.rerun()
+    if cancel:
+        st.session_state.editing = False
+        st.rerun()
 
 
 def command_center(notes):
@@ -77,15 +218,10 @@ def notes_tab(notes):
     if not shown:
         st.info("No notes found.")
 
-    for n in shown:
-        with st.container(border=True):
-            label = ("📌 " if n["pinned"] else "") + database.KINDS[n["kind"]].split()[0] + " " + n["title"]
-            st.button(label, key=f"open{n['id']}", on_click=open_note, args=(n["id"],))
-            preview = n["body"][:120] + ("..." if len(n["body"]) > 120 else "")
-            st.caption(preview)
-            if n["tags"]:
-                st.caption(" ".join(f"#{t}" for t in n["tags"]))
-            st.caption(n["created_at"])
+    cols = st.columns(2)
+    for i, n in enumerate(shown):
+        with cols[i % 2]:
+            note_card(n)
 
 
 def graph_tab(notes):
@@ -134,32 +270,11 @@ def note_view(note):
     st.button("← Back to all notes", on_click=open_note, args=(None,))
 
     if st.session_state.editing:
-        with st.form(f"edit_form_{note['id']}"):
-            new_title = st.text_input("Title", value=note["title"])
-            new_kind = st.selectbox(
-                "Type", list(database.KINDS), index=list(database.KINDS).index(note["kind"]),
-                format_func=database.KINDS.get,
-            )
-            new_body = st.text_area("Note", value=note["body"], height=250)
-            new_tags = st.text_input("Tags, separated by commas", value=", ".join(note["tags"]))
-            save = st.form_submit_button("Save changes")
-            cancel = st.form_submit_button("Cancel")
-
-        if save:
-            if new_title.strip() and new_body.strip():
-                database.update_note(note["id"], new_title.strip(), new_body.strip(), new_tags, new_kind)
-                st.session_state.editing = False
-                st.rerun()
-            else:
-                st.error("The title and the note can't be empty.")
-        if cancel:
-            st.session_state.editing = False
-            st.rerun()
+        edit_form(note)
         return
 
     st.caption(database.KINDS[note["kind"]] + ("  ·  📌 Pinned" if note["pinned"] else ""))
-    st.header(note["title"])
-    show_body(note)
+    show_note(note)
     if note["tags"]:
         st.caption(" ".join(f"#{t}" for t in note["tags"]))
     st.caption(f"Saved: {note['created_at']}")

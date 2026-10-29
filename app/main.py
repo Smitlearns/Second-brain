@@ -133,11 +133,12 @@ class NoteIn(BaseModel):
     body: str
     tags: list[str] = []
     kind: str = "note"
+    extra: dict = {}  # plan: {"steps": [{"text", "done"}], "deadline"}, code: {"language"}
 
 
 @app.post("/notes")
 def create_note(note: NoteIn):
-    note_id = database.add_note(note.title, note.body, ",".join(note.tags), note.kind)
+    note_id = database.add_note(note.title, note.body, ",".join(note.tags), note.kind, note.extra)
     return {"id": note_id, "message": "Note saved"}
 
 
@@ -148,7 +149,7 @@ def list_notes(tag: str | None = None):
 
 @app.put("/notes/{note_id}")
 def edit_note(note_id: int, note: NoteIn):
-    if not database.update_note(note_id, note.title, note.body, ",".join(note.tags), note.kind):
+    if not database.update_note(note_id, note.title, note.body, ",".join(note.tags), note.kind, note.extra):
         raise HTTPException(status_code=404, detail="Note not found")
     return {"message": "Updated"}
 

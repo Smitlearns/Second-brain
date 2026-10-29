@@ -134,6 +134,40 @@ select {
   font: inherit;
 }
 
+/* Type picker on the Notes tab: the checked radio shows its form */
+.type-radio { position: absolute; opacity: 0; pointer-events: none; }
+.type-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.type-tabs label {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #1c1f27;
+  color: #8a90a0;
+  cursor: pointer;
+}
+.type-tabs label:hover { color: #e6e6e6; }
+.type-forms > form { display: none; }
+
+#pick-note:checked ~ .type-tabs label[for="pick-note"],
+#pick-idea:checked ~ .type-tabs label[for="pick-idea"],
+#pick-plan:checked ~ .type-tabs label[for="pick-plan"],
+#pick-code:checked ~ .type-tabs label[for="pick-code"] { background: #4f7cff; color: white; }
+
+#pick-note:checked ~ .type-forms .form-note,
+#pick-idea:checked ~ .type-forms .form-idea,
+#pick-plan:checked ~ .type-forms .form-plan,
+#pick-code:checked ~ .type-forms .form-code { display: flex; }
+
+.type-radio:focus-visible ~ .type-tabs { outline: 2px solid #4f7cff; outline-offset: 4px; border-radius: 999px; }
+
+/* each type has its own feel */
+.form-idea { border-left: 4px solid #f2c94c; }
+.form-plan { border-left: 4px solid #4caf7d; }
+.form-code { border-left: 4px solid #bb6bd9; }
+.big { font-size: 1.2rem; padding: 14px; }
+.code { font-family: ui-monospace, Consolas, monospace; font-size: 0.9rem; tab-size: 4; }
+.field { display: flex; flex-direction: column; gap: 6px; color: #8a90a0; font-size: 0.9rem; }
+input[type="date"] { color-scheme: dark; }
+
 /* Chat list next to the chat */
 .chat-layout { display: grid; grid-template-columns: 200px 1fr; gap: 20px; }
 .chat-main { min-width: 0; }
