@@ -41,7 +41,7 @@ export default function DashboardPage() {
   const props = { notes, replaceNote, reload };
   return (
     <main className="wide">
-      <h1>Second Brain</h1>
+      <h1>Dashboard</h1>
       {stats && <CommandCenter notes={notes} stats={stats} />}
       <DueSoon notes={notes} />
 
@@ -92,8 +92,15 @@ function CommandCenter({ notes, stats }: { notes: Note[]; stats: Stats }) {
         ))}
       </div>
       <div className="split">
-        <small>Top tags: {topTags.map(([t, c]) => `#${t} (${c})`).join("  ") || "none yet"}</small>
-        <small>By type: {byKind.map(([k, c]) => `${KINDS[k].icon} ${KINDS[k].label} (${c})`).join("  ")}</small>
+        <div className="chips">
+          <small>Top tags</small>
+          {topTags.length ? topTags.map(([t, c]) => <span key={t} className="chip">#{t} <b>{c}</b></span>)
+            : <small>none yet</small>}
+        </div>
+        <div className="chips">
+          <small>By type</small>
+          {byKind.map(([k, c]) => <span key={k} className="chip">{KINDS[k].icon} {KINDS[k].label} <b>{c}</b></span>)}
+        </div>
       </div>
     </>
   );
@@ -197,7 +204,7 @@ function Ideas({ notes, reload }: SectionProps) {
           {ideas.map((n) => (
             <article key={n.id} className="card kind-idea">
               <Link to={noteLink(n.id)} className="card-title idea-title">{noteLabel(n)}</Link>
-              {n.body && <small>{preview(n.body, 150)}</small>}
+              {n.body && <p className="card-text">{preview(n.body, 150)}</p>}
             </article>
           ))}
         </div>

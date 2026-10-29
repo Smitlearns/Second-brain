@@ -92,9 +92,28 @@ export function duePlans(notes: Note[]) {
     .map((p) => p.note);
 }
 
+/** "Today", "Yesterday" or "28 Oct", for lists. Saved times come from SQLite in UTC. */
+export function shortDate(stamp: string) {
+  const date = new Date(stamp.replace(" ", "T") + "Z");
+  if (Number.isNaN(date.getTime())) return stamp;
+  const days = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86_400_000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  const sameYear = date.getFullYear() === new Date().getFullYear();
+  return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: sameYear ? undefined : "numeric" });
+}
+
+/** "28 Oct 2026, 13:21", for a single note. */
+export function fullDate(stamp: string) {
+  const date = new Date(stamp.replace(" ", "T") + "Z");
+  return Number.isNaN(date.getTime()) ? stamp : date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
 export function deadlineText(note: Note) {
   const deadline = note.extra.deadline;
-  if (!deadline) return "";
+  if (!deadline || planFinished(note)) return ""; // a finished plan isn't late
   const days = daysLeft(note);
   if (days === null) return `due ${deadline}`;
   if (days > 1) return `due in ${days} days`;

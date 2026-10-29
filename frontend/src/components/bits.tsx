@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { setStepDone, type Note } from "../api";
-import { codeLanguage, deadlineText, KINDS, planProgress, preview } from "../notes";
+import { codeLanguage, deadlineText, fullDate, KINDS, planFinished, planProgress, preview, shortDate } from "../notes";
 
 /** Note text or an AI answer as Markdown. A single Enter still starts a new line, as in plain text. */
 export function Markdown({ text }: { text: string }) {
@@ -27,7 +27,7 @@ export function Progress({ done, total, text }: { done: number; total: number; t
 }
 
 export function Tags({ tags }: { tags: string[] }) {
-  return tags.length ? <small>{tags.map((t) => `#${t}`).join(" ")}</small> : null;
+  return tags.length ? <div className="chips">{tags.map((t) => <span key={t} className="chip">#{t}</span>)}</div> : null;
 }
 
 /** Code with line numbers. maxLines cuts it short for previews. */
@@ -64,6 +64,17 @@ export function Steps({ note, onChange }: { note: Note; onChange: (note: Note) =
   );
 }
 
+/** The bottom line of a card: tags (and language for code) on the left, the date on the right. */
+export function CardMeta({ note }: { note: Note }) {
+  return (
+    <div className="card-meta">
+      {note.kind === "code" && <span className="chip">{codeLanguage(note)}</span>}
+      {note.tags.map((t) => <span key={t} className="chip">#{t}</span>)}
+      <small className="date" title={fullDate(note.created_at)}>{shortDate(note.created_at)}</small>
+    </div>
+  );
+}
+
 export const noteLink = (id: number) => `/dashboard/notes/${id}`;
 
 export const noteLabel = (n: Note) => `${n.pinned ? "📌 " : ""}${KINDS[n.kind].icon} ${n.title}`;
@@ -72,18 +83,17 @@ export const noteLabel = (n: Note) => `${n.pinned ? "📌 " : ""}${KINDS[n.kind]
 export function NoteCard({ note: n }: { note: Note }) {
   const { done, total } = planProgress(n);
   const due = deadlineText(n);
+  const steps = planFinished(n) ? "✅ All steps done" : `${done}/${total} steps done`;
   return (
     <article className={`card note-card kind-${n.kind}`}>
       <Link to={noteLink(n.id)} className="card-title">{noteLabel(n)}</Link>
-      {n.kind === "idea" && n.body && <small>Why it matters: {preview(n.body)}</small>}
+      {n.kind === "idea" && n.body && <p className="card-text">{preview(n.body)}</p>}
       {n.kind === "plan" && (total
-        ? <Progress done={done} total={total} text={`${done}/${total} steps done${due ? ` · ${due}` : ""}`} />
+        ? <Progress done={done} total={total} text={`${steps}${due ? ` · ${due}` : ""}`} />
         : due && <small>{due}</small>)}
       {n.kind === "code" && <CodeBlock code={n.body} maxLines={4} />}
-      {n.kind === "note" && <small>{preview(n.body)}</small>}
-      {n.kind === "code" && <small>{codeLanguage(n)}</small>}
-      <Tags tags={n.tags} />
-      <small>{n.created_at}</small>
+      {n.kind === "note" && <p className="card-text">{preview(n.body)}</p>}
+      <CardMeta note={n} />
     </article>
   );
 }

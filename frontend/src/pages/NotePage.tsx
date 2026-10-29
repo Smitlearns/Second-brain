@@ -4,7 +4,7 @@ import * as api from "../api";
 import type { Note, NoteFields } from "../api";
 import { CodeBlock, Markdown, noteLabel, noteLink, Progress, Steps, Tags } from "../components/bits";
 import NoteForm from "../components/NoteForm";
-import { codeLanguage, deadlineText, fieldsFrom, KIND_LIST, KINDS, planProgress } from "../notes";
+import { codeLanguage, deadlineText, fieldsFrom, fullDate, KIND_LIST, KINDS, planProgress } from "../notes";
 
 /** One note, laid out for its type, with edit, pin, delete and "Ask about this note". */
 export default function NotePage() {
@@ -58,7 +58,7 @@ export default function NotePage() {
   }
 
   return (
-    <main>
+    <main className="note-page">
       <button type="button" className="link" onClick={back}>← Back to all notes</button>
 
       {editing ? (
@@ -74,12 +74,12 @@ export default function NotePage() {
         </>
       ) : (
         <>
-          <small>{KINDS[note.kind].icon} {KINDS[note.kind].label}{note.pinned && "  ·  📌 Pinned"}</small>
+          <small className="eyebrow">{KINDS[note.kind].icon} {KINDS[note.kind].label}{note.pinned && "  ·  📌 Pinned"}</small>
           <NoteBody note={note} onChange={setNote} />
           <Tags tags={note.tags} />
-          <small>Saved: {note.created_at}</small>
+          <small>Saved {fullDate(note.created_at)}</small>
 
-          <div className="buttons">
+          <div className="buttons note-actions">
             <button type="button" className="secondary" onClick={() => setEditing(fieldsFrom(note))}>Edit</button>
             <button type="button" className="secondary" onClick={() => api.setPinned(id, !note.pinned).then(setNote)}>
               {note.pinned ? "Unpin" : "Pin"}
