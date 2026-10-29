@@ -13,6 +13,18 @@ function addBubble(role, text) {
     return bubble;
 }
 
+// Asks the AI for a short chat title and shows it in the chat list
+async function nameChat(chatId, link) {
+    try {
+        const response = await fetch(`/chats/${chatId}/title`, { method: "POST" });
+        if (!response.ok) return;
+        const { title } = await response.json();
+        if (link && title) link.textContent = title;
+    } catch {
+        // the shortened question stays as the name; no need to bother the user
+    }
+}
+
 // Sends the question and shows the answer word by word as the AI writes it
 async function sendQuestion(form, question) {
     const input = form.querySelector("input[name='question']");
@@ -47,11 +59,16 @@ async function sendQuestion(form, question) {
             scrollChat();
         }
 
+        const failed = text.includes("couldn't reach the AI model");
         const sources = JSON.parse(decodeURIComponent(response.headers.get("X-Sources") || "%5B%5D"));
-        if (sources.length && !text.includes("couldn't reach the AI model")) {
+        if (sources.length && !failed) {
             const small = document.createElement("small");
             small.textContent = "From your notes: " + sources.join(", ");
             reply.appendChild(small);
+        }
+
+        if (response.headers.get("X-Needs-Title") === "1" && !failed) {
+            nameChat(form.dataset.chat, link);  // not awaited, so you can keep typing
         }
     } catch {
         reply.textContent = "Something went wrong sending your question. Try again.";

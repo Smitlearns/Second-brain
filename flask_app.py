@@ -1,8 +1,10 @@
 from flask import Flask, Response, redirect, render_template, request, url_for
 
 from app import database, importer
+from app.static_files import static_url
 
 flask_app = Flask(__name__, template_folder="templates")
+flask_app.jinja_env.globals["static_url"] = static_url
 flask_app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024  # imports up to 25 MB
 database.init_db()
 

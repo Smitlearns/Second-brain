@@ -183,6 +183,28 @@ def prepare(question, history=None, focus_note=None):
     return messages, [n["title"] for n in notes]
 
 
+def make_title(question, answer):
+    """A short name for a chat, written by the model from its first question and answer."""
+    response = ollama.chat(
+        model=MODEL,
+        messages=[{
+            "role": "user",
+            "content": (
+                "Write a short title (2 to 6 words) for a chat that starts like this. "
+                "Reply with only the title: no quotes, no full stop.\n\n"
+                f"Question: {question}\nAnswer: {answer[:500]}"
+            ),
+        }],
+        keep_alive="2m",
+        options={"num_predict": 20, "temperature": 0.3},
+    )
+    lines = response.message.content.strip().splitlines()
+    title = lines[0] if lines else ""
+    title = re.sub(r"^(title|chat title)\s*:\s*", "", title, flags=re.IGNORECASE)
+    title = title.strip(" \"'*#.").strip()
+    return title[:50]
+
+
 def stream_answer(messages):
     """Yield the answer a few words at a time, as the model writes it."""
     for chunk in ollama.chat(

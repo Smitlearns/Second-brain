@@ -11,6 +11,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from app import ai, database
+from app.static_files import static_url
 from flask_app import flask_app
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,6 +21,7 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 app.mount("/flask", WSGIMiddleware(flask_app))
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
+templates.env.globals["static_url"] = static_url
 
 database.init_db()
 
@@ -123,7 +125,40 @@ def ask(chat_id: int, question: str = Form(...)):
         # headers must be plain ASCII, so the note titles are URL-encoded
         "X-Sources": quote(json.dumps(sources)),
         "X-Chat-Title": quote(chat["title"]),
+        # tells the page to ask for an AI-written title once the answer is done
+        "X-Needs-Title": "1" if needs_title(chat) else "0",
     })
+
+
+def needs_title(chat):
+    # chats about a note keep their "About: ..." name
+    return not chat["auto_titled"] and chat["note_id"] is None
+
+
+@app.post("/chats/{chat_id}/title")
+def make_chat_title(chat_id: int):
+    """Let the AI name the chat from its first question and answer."""
+    chat = database.get_chat(chat_id)
+    if chat is None:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    if not needs_title(chat):
+        return {"title": chat["title"]}
+
+    messages = database.get_messages(chat_id)
+    question = next((m for m in messages if m["role"] == "user"), None)
+    answer = next((m for m in messages if m["role"] == "assistant" and not m["error"]), None)
+    if question is None or answer is None:
+        return {"title": chat["title"]}
+
+    try:
+        title = ai.make_title(question["content"], answer["content"])
+    except ai.AI_ERRORS:
+        logger.exception("Could not make a chat title")
+        return {"title": chat["title"]}  # keep the shortened question for now, try again next answer
+    if title:
+        database.rename_chat(chat_id, title, auto_titled=True)
+        chat["title"] = title
+    return {"title": chat["title"]}
 
 
 # ---------- JSON API (still available at /docs) ----------

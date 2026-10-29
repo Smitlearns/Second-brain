@@ -14,6 +14,13 @@ database.init_db()
 # Remember which note is open, and whether it is being edited
 st.session_state.setdefault("open_note", None)
 st.session_state.setdefault("editing", False)
+st.session_state.setdefault("section", "🗂️ All")
+
+
+def remember_section():
+    # clicking the section that's already selected unselects it, so ignore that
+    if st.session_state.section_picker:
+        st.session_state.section = st.session_state.section_picker
 
 
 def open_note(note_id):
@@ -73,11 +80,11 @@ def deadline_text(note):
     return f"overdue by {-days} day{'s' if days < -1 else ''}"
 
 
-def note_card(n):
+def note_card(n, where="all"):
     """One note in the list. Each type shows what matters most for it."""
     with st.container(border=True):
         label = ("📌 " if n["pinned"] else "") + database.KINDS[n["kind"]].split()[0] + " " + n["title"]
-        st.button(label, key=f"open{n['id']}", on_click=open_note, args=(n["id"],))
+        st.button(label, key=f"open{where}{n['id']}", on_click=open_note, args=(n["id"],))
 
         if n["kind"] == "idea":
             if n["body"]:
@@ -100,8 +107,14 @@ def note_card(n):
         st.caption(n["created_at"])
 
 
-def toggle_step(note_id, index):
-    database.set_step_done(note_id, index, st.session_state[f"step{note_id}_{index}"])
+def toggle_step(note_id, index, key):
+    database.set_step_done(note_id, index, st.session_state[key])
+
+
+def step_checkboxes(note, prefix):
+    for i, step in enumerate(note["extra"]["steps"]):
+        key = f"{prefix}{note['id']}_{i}"
+        st.checkbox(step["text"], value=step["done"], key=key, on_change=toggle_step, args=(note["id"], i, key))
 
 
 def show_note(note):
@@ -125,9 +138,7 @@ def show_note(note):
             cols[2].metric("Time left", due.replace("due ", "").capitalize())
         if total:
             st.progress(done / total)
-            for i, step in enumerate(note["extra"]["steps"]):
-                st.checkbox(step["text"], value=step["done"], key=f"step{note['id']}_{i}",
-                            on_change=toggle_step, args=(note["id"], i))
+            step_checkboxes(note, "step")
         if note["body"]:
             st.markdown("**Details**")
             st.write(note["body"])
@@ -201,19 +212,16 @@ def command_center(notes):
     ))
 
 
-def notes_tab(notes):
-    search_col, tag_col, kind_col = st.columns([2, 2, 1])
-    search = search_col.text_input("Search notes")
+# ---------- One section per type, each with its own layout ----------
+
+def all_tab(notes):
+    search_col, tag_col = st.columns(2)
+    search = search_col.text_input("Search everything")
     picked = tag_col.multiselect("Filter by tag", database.get_all_tags())
-    kind = kind_col.selectbox(
-        "Type", ["all", *database.KINDS], format_func=lambda k: "All" if k == "all" else database.KINDS[k]
-    )
 
     shown = database.search_notes(search) if search else notes
     if picked:
         shown = [n for n in shown if set(picked) <= set(n["tags"])]
-    if kind != "all":
-        shown = [n for n in shown if n["kind"] == kind]
 
     if not shown:
         st.info("No notes found.")
@@ -222,6 +230,86 @@ def notes_tab(notes):
     for i, n in enumerate(shown):
         with cols[i % 2]:
             note_card(n)
+
+
+def empty(kind):
+    st.info(f"No {kind}s yet. Add one on the Notes tab at the top of the app.")
+
+
+def notes_only_tab(notes):
+    plain = [n for n in notes if n["kind"] == "note"]
+    if not plain:
+        return empty("note")
+    cols = st.columns(2)
+    for i, n in enumerate(plain):
+        with cols[i % 2]:
+            note_card(n, "notes")
+
+
+def ideas_tab(notes):
+    # quick add, so an idea can be saved without leaving the Dashboard
+    with st.form("quick_idea", clear_on_submit=True, border=False):
+        text_col, button_col = st.columns([5, 1], vertical_alignment="bottom")
+        idea = text_col.text_input("New idea", placeholder="Got an idea? Type it in one line")
+        if button_col.form_submit_button("Add idea") and idea.strip():
+            database.add_note(idea.strip(), "", "", "idea")
+            st.rerun()
+
+    ideas = [n for n in notes if n["kind"] == "idea"]
+    if not ideas:
+        return st.info("No ideas yet. Type one above.")
+    cols = st.columns(3)
+    for i, n in enumerate(ideas):
+        with cols[i % 3], st.container(border=True):
+            st.markdown(f"#### {'📌 ' if n['pinned'] else ''}💡 {n['title']}")
+            if n["body"]:
+                st.caption(preview(n["body"], 150))
+            st.button("Open", key=f"openidea{n['id']}", on_click=open_note, args=(n["id"],))
+
+
+def plans_tab(notes):
+    plans = [n for n in notes if n["kind"] == "plan"]
+    if not plans:
+        return empty("plan")
+
+    def order(n):  # unfinished plans first, soonest deadline first
+        done, total = plan_progress(n)
+        return (total > 0 and done == total, n["extra"].get("deadline") or "9999")
+
+    for n in sorted(plans, key=order):
+        done, total = plan_progress(n)
+        due = deadline_text(n)
+        with st.container(border=True):
+            title_col, button_col = st.columns([5, 1])
+            finished = " ✅" if total and done == total else ""
+            title_col.markdown(f"#### 🗺️ {n['title']}{finished}")
+            button_col.button("Open", key=f"openplan{n['id']}", on_click=open_note, args=(n["id"],))
+            if total:
+                st.progress(done / total, text=f"{done}/{total} steps done")
+            if due:
+                st.caption(f":red[{due}]" if due.startswith("overdue") else due)
+            if total:
+                with st.expander("Steps"):
+                    step_checkboxes(n, "planstep")
+
+
+def code_tab(notes):
+    snippets = [n for n in notes if n["kind"] == "code"]
+    if not snippets:
+        return empty("code snippet")
+
+    langs = sorted({n["extra"].get("language", "other") for n in snippets})
+    if len(langs) > 1:
+        picked = st.pills("Language", langs)
+        if picked:
+            snippets = [n for n in snippets if n["extra"].get("language", "other") == picked]
+
+    for n in snippets:
+        with st.expander(f"💻 {n['title']}  ·  {n['extra'].get('language', 'other')}"):
+            st.code(n["body"], language=code_language(n), line_numbers=True)
+            if n["tags"]:
+                st.caption(" ".join(f"#{t}" for t in n["tags"]))
+            st.button("Open", key=f"opencode{n['id']}", on_click=open_note, args=(n["id"],))
 
 
 def graph_tab(notes):
@@ -316,10 +404,20 @@ if note is None:
     open_note(None)
     notes = database.get_notes()
     command_center(notes)
-    tab_notes, tab_graph = st.tabs(["Notes", "Graph"])
-    with tab_notes:
-        notes_tab(notes)
-    with tab_graph:
-        graph_tab(notes)
+
+    sections = {
+        "🗂️ All": all_tab,
+        "📝 Notes": notes_only_tab,
+        "💡 Ideas": ideas_tab,
+        "🗺️ Plans": plans_tab,
+        "💻 Code": code_tab,
+        "🕸️ Graph": graph_tab,
+    }
+    # Streamlit forgets a widget's value while a note is open, so the section is also
+    # kept in "section". That way "Back" returns to the same section.
+    st.session_state.section_picker = st.session_state.section
+    st.segmented_control("Section", list(sections), key="section_picker",
+                         on_change=remember_section, label_visibility="collapsed")
+    sections[st.session_state.section](notes)
 else:
     note_view(note)

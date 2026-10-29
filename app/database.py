@@ -50,6 +50,7 @@ def init_db():
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        _add_column(conn, "chats", "auto_titled", "INTEGER NOT NULL DEFAULT 0")  # 1 once the AI named it
         conn.execute("""
             CREATE TABLE IF NOT EXISTS messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -233,9 +234,11 @@ def get_chat(chat_id):
         return dict(row) if row else None
 
 
-def rename_chat(chat_id, title):
+def rename_chat(chat_id, title, auto_titled=False):
     with get_connection() as conn:
-        conn.execute("UPDATE chats SET title = ? WHERE id = ?", (title, chat_id))
+        conn.execute(
+            "UPDATE chats SET title = ?, auto_titled = ? WHERE id = ?", (title, int(auto_titled), chat_id)
+        )
 
 
 def delete_chat(chat_id):
