@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { DataSet } from "vis-data";
 import { Network } from "vis-network";
 import { getLinks, type Kind, type Link, type Note } from "../api";
+import { themeColor, useTheme } from "../theme";
 import { noteLink } from "./bits";
 
 const KIND_COLORS: Record<Kind, string> = { note: "#4f7cff", idea: "#f2c94c", plan: "#4caf7d", code: "#bb6bd9" };
@@ -13,6 +14,7 @@ export default function Graph({ notes }: { notes: Note[] }) {
   const navigate = useNavigate();
   const [links, setLinks] = useState<Link[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const theme = useTheme(); // redraw in the new colours when the theme changes
 
   useEffect(() => {
     getLinks().then(setLinks, () => setFailed(true));
@@ -31,15 +33,15 @@ export default function Graph({ notes }: { notes: Note[] }) {
       id: i, from: l.from, to: l.to, title: l.how, dashes: l.how.startsWith("similar"),
     })));
     const network = new Network(box.current, { nodes, edges }, {
-      nodes: { shape: "dot", font: { color: "#e6e6e6", size: 13 } },
-      edges: { color: { color: "#555c70", highlight: "#8fa8ff" }, smooth: false },
+      nodes: { shape: "dot", font: { color: themeColor("text"), size: 13 } },
+      edges: { color: { color: themeColor("edge"), highlight: themeColor("accent") }, smooth: false },
       physics: { stabilization: { iterations: 200 } },
     });
     network.on("doubleClick", ({ nodes: picked }) => {
       if (picked.length) navigate(noteLink(picked[0]));
     });
     return () => network.destroy();
-  }, [notes, links, navigate]);
+  }, [notes, links, navigate, theme]);
 
   if (notes.length < 2) return <p className="empty">Save a few notes to see how they connect.</p>;
   if (failed) return <p className="error">Couldn't load the connections. Try again.</p>;

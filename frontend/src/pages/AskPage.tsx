@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import * as api from "../api";
 import type { Chat, Message, Note } from "../api";
+import { Markdown } from "../components/bits";
 
 const SUGGESTIONS = [
   ["Summarize this note", "Summarize this note"],
@@ -137,7 +138,7 @@ export default function AskPage() {
           <div id="chat" ref={chatBox}>
             {messages.map((m, i) => (
               <div key={m.id ?? m.key ?? `new-${i}`} className={`msg ${m.role === "user" ? "user" : "bot"}`}>
-                {m.content}
+                {m.role === "assistant" ? <Markdown text={m.content} /> : m.content}
                 {m.sources.length > 0 && <small>From your notes: {m.sources.join(", ")}</small>}
               </div>
             ))}

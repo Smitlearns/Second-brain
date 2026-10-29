@@ -10,7 +10,31 @@
   --yellow: #f2c94c;
   --purple: #bb6bd9;
   --red: #e57373;
+  --secondary: #333846;
+  --secondary-text: #ffffff;
+  --selected: #252a38;
+  --edge: #555c70;
   color-scheme: dark;
+}
+
+/* index.html picks the theme from the saved choice or the computer's setting */
+:root[data-theme="light"] {
+  --bg: #f4f5f8;
+  --card: #ffffff;
+  --raised: #eceef3;
+  --border: #d3d7e0;
+  --text: #1d2129;
+  --muted: #5d6474;
+  --accent: #3461e6;
+  --green: #2e8b57;
+  --yellow: #c79a00;
+  --purple: #9247b8;
+  --red: #c62828;
+  --secondary: #e1e4eb;
+  --secondary-text: #1d2129;
+  --selected: #e3e9f9;
+  --edge: #b1b7c5;
+  color-scheme: light;
 }
 
 body {
@@ -63,7 +87,7 @@ button {
 
 button:hover { opacity: 0.85; }
 button:disabled { opacity: 0.5; cursor: wait; }
-button.secondary { background: var(--border); }
+button.secondary { background: var(--secondary); color: var(--secondary-text); }
 button.delete { background: #c0392b; }
 button.link { background: none; color: var(--muted); padding: 8px 0; margin-bottom: 8px; }
 button.link:hover { color: var(--text); }
@@ -76,11 +100,45 @@ small, .empty { color: var(--muted); }
 small.error { margin: 0; }
 .text { margin: 0; white-space: pre-wrap; line-height: 1.5; }
 
+/* Markdown in notes and AI answers */
+.markdown { line-height: 1.5; overflow-wrap: anywhere; white-space: normal; }
+.markdown > :first-child { margin-top: 0; }
+.markdown > :last-child { margin-bottom: 0; }
+.markdown p, .markdown ul, .markdown ol, .markdown pre, .markdown blockquote, .markdown table { margin: 0 0 0.75em; }
+.markdown ul, .markdown ol { padding-left: 1.5em; }
+.markdown h1, .markdown h2, .markdown h3 { margin: 1em 0 0.5em; line-height: 1.25; }
+.markdown h1 { font-size: 1.4rem; }
+.markdown h2 { font-size: 1.2rem; }
+.markdown h3 { font-size: 1.05rem; }
+.markdown code { font-family: ui-monospace, Consolas, monospace; font-size: 0.9em; background: var(--raised); padding: 1px 5px; border-radius: 4px; }
+.markdown pre { background: var(--raised); padding: 10px 12px; border-radius: 6px; overflow-x: auto; }
+.markdown pre code { background: none; padding: 0; }
+.msg .markdown code, .msg .markdown pre { background: var(--bg); }
+.markdown blockquote { border-left: 3px solid var(--border); padding-left: 12px; color: var(--muted); margin-left: 0; }
+.markdown table { border-collapse: collapse; display: block; overflow-x: auto; }
+.markdown th, .markdown td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+.markdown hr { border: none; border-top: 1px solid var(--border); }
+
 /* Navigation */
 .nav { display: flex; gap: 16px; max-width: 960px; margin: 0 auto; padding: 24px 16px 20px; }
 .nav a { color: var(--muted); text-decoration: none; }
 .nav a:hover, .nav a.active { color: var(--text); }
 .nav a.active { font-weight: 600; }
+.badge {
+  display: inline-block;
+  min-width: 1.4em;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--red);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  box-sizing: border-box;
+}
+.theme-toggle { margin-left: auto; background: none; color: var(--muted); padding: 0; }
+.theme-toggle:hover { color: var(--text); opacity: 1; }
 
 /* Pills: note type on the Notes page, sections on the Dashboard */
 .pills { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -104,6 +162,8 @@ small.error { margin: 0; }
 .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-bottom: 12px; }
 .metric { background: var(--card); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
 .metric strong { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.due-soon { border-left: 4px solid var(--red); }
+.due-soon ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
 .split { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 20px; }
 
 .search { width: 100%; box-sizing: border-box; margin-bottom: 10px; }
@@ -166,7 +226,7 @@ details.card summary { color: var(--text); font-weight: 600; }
   text-overflow: ellipsis;
 }
 .chat-list a:hover { color: var(--text); background: var(--card); }
-.chat-list a.active { color: var(--text); background: #252a38; }
+.chat-list a.active { color: var(--text); background: var(--selected); }
 
 #chat {
   height: 55vh;

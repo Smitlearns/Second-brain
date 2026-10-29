@@ -43,22 +43,60 @@ export const fieldsFrom = (note: Note): NoteFields => ({
   language: note.extra.language ?? "other",
 });
 
-export const preview = (text: string, length = 120) =>
-  text.length > length ? text.slice(0, length) + "..." : text;
+/** Markdown without its symbols, for short previews: "**Big** [idea](url)" becomes "Big idea". */
+export function plainText(text: string) {
+  return text
+    .replace(/```\w*/g, "")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+/gm, "")
+    .replace(/(\*\*|\*|~~|`)(\S(?:.*?\S)?)\1/g, "$2")
+    // _ only marks emphasis around whole words, so snake_case_names stay as they are
+    .replace(/(^|\W)(__|_)(\S(?:.*?\S)?)\2(?=\W|$)/g, "$1$3");
+}
+
+export const preview = (text: string, length = 120) => {
+  text = plainText(text);
+  return text.length > length ? text.slice(0, length) + "..." : text;
+};
 
 export function planProgress(note: Note) {
   const steps = note.extra.steps ?? [];
   return { done: steps.filter((s) => s.done).length, total: steps.length };
 }
 
+export function planFinished(note: Note) {
+  const { done, total } = planProgress(note);
+  return total > 0 && done === total;
+}
+
+/** Days until the deadline (negative once it's passed), or null if there's no valid deadline. */
+export function daysLeft(note: Note) {
+  const deadline = note.extra.deadline;
+  if (!deadline) return null;
+  const due = new Date(deadline + "T00:00:00");
+  if (Number.isNaN(due.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((due.getTime() - today.getTime()) / 86_400_000);
+}
+
+export const DUE_SOON_DAYS = 3;
+
+/** Unfinished plans that are overdue or due within DUE_SOON_DAYS, soonest first. */
+export function duePlans(notes: Note[]) {
+  return notes
+    .filter((n) => n.kind === "plan" && !planFinished(n))
+    .map((n) => ({ note: n, days: daysLeft(n) }))
+    .filter((p): p is { note: Note; days: number } => p.days !== null && p.days <= DUE_SOON_DAYS)
+    .sort((a, b) => a.days - b.days)
+    .map((p) => p.note);
+}
+
 export function deadlineText(note: Note) {
   const deadline = note.extra.deadline;
   if (!deadline) return "";
-  const due = new Date(deadline + "T00:00:00");
-  if (Number.isNaN(due.getTime())) return `due ${deadline}`;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Math.round((due.getTime() - today.getTime()) / 86_400_000);
+  const days = daysLeft(note);
+  if (days === null) return `due ${deadline}`;
   if (days > 1) return `due in ${days} days`;
   if (days === 1) return "due tomorrow";
   if (days === 0) return "due today";

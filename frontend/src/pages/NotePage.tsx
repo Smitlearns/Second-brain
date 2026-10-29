@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import * as api from "../api";
 import type { Note, NoteFields } from "../api";
-import { CodeBlock, noteLabel, noteLink, Progress, Steps, Tags } from "../components/bits";
+import { CodeBlock, Markdown, noteLabel, noteLink, Progress, Steps, Tags } from "../components/bits";
 import NoteForm from "../components/NoteForm";
 import { codeLanguage, deadlineText, fieldsFrom, KIND_LIST, KINDS, planProgress } from "../notes";
 
@@ -107,7 +107,7 @@ function NoteBody({ note, onChange }: { note: Note; onChange: (note: Note) => vo
     return (
       <>
         <h1>💡 {note.title}</h1>
-        {note.body && <div className="card kind-idea"><strong>Why it matters</strong><p className="text">{note.body}</p></div>}
+        {note.body && <div className="card kind-idea"><strong>Why it matters</strong><Markdown text={note.body} /></div>}
       </>
     );
   }
@@ -124,7 +124,7 @@ function NoteBody({ note, onChange }: { note: Note; onChange: (note: Note) => vo
           {due && <div className="metric"><small>Time left</small><strong>{due.replace("due ", "")}</strong></div>}
         </div>
         {total > 0 && <><Progress done={done} total={total} /><Steps note={note} onChange={onChange} /></>}
-        {note.body && <><strong>Details</strong><p className="text">{note.body}</p></>}
+        {note.body && <><strong>Details</strong><Markdown text={note.body} /></>}
       </>
     );
   }
@@ -142,7 +142,7 @@ function NoteBody({ note, onChange }: { note: Note; onChange: (note: Note) => vo
   return (
     <>
       <h1>{note.title}</h1>
-      <p className="text">{note.body}</p>
+      <Markdown text={note.body} />
     </>
   );
 }

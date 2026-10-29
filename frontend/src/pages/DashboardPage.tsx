@@ -5,7 +5,7 @@ import type { Note, Stats } from "../api";
 import { CodeBlock, NoteCard, noteLabel, noteLink, Progress, Steps, Tags } from "../components/bits";
 // the graph library is big, so it only loads when the Graph section is opened
 const Graph = lazy(() => import("../components/Graph"));
-import { codeLanguage, deadlineText, KIND_LIST, KINDS, planProgress, preview } from "../notes";
+import { codeLanguage, deadlineText, DUE_SOON_DAYS, duePlans, KIND_LIST, KINDS, planProgress, preview } from "../notes";
 
 const SECTIONS = {
   all: "🗂️ All",
@@ -43,6 +43,7 @@ export default function DashboardPage() {
     <main className="wide">
       <h1>Second Brain</h1>
       {stats && <CommandCenter notes={notes} stats={stats} />}
+      <DueSoon notes={notes} />
 
       <div className="pills" role="tablist" aria-label="Section">
         {(Object.keys(SECTIONS) as Section[]).map((s) => (
@@ -95,6 +96,30 @@ function CommandCenter({ notes, stats }: { notes: Note[]; stats: Stats }) {
         <small>By type: {byKind.map(([k, c]) => `${KINDS[k].icon} ${KINDS[k].label} (${c})`).join("  ")}</small>
       </div>
     </>
+  );
+}
+
+/** Plans that are overdue or due in the next few days, so they're seen before anything else. */
+function DueSoon({ notes }: { notes: Note[] }) {
+  const due = duePlans(notes);
+  if (!due.length) return null;
+  return (
+    <section className="card due-soon" aria-label="Plans due soon">
+      <strong>⏰ Due in the next {DUE_SOON_DAYS} days or overdue</strong>
+      <ul>
+        {due.map((n) => {
+          const text = deadlineText(n);
+          const { done, total } = planProgress(n);
+          return (
+            <li key={n.id}>
+              <Link to={noteLink(n.id)}>{n.title}</Link>{" "}
+              <small className={text.startsWith("overdue") ? "error" : undefined}>{text}</small>
+              {total > 0 && <small> · {done}/{total} steps done</small>}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

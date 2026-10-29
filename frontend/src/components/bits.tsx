@@ -1,6 +1,21 @@
+import ReactMarkdown from "react-markdown";
 import { Link } from "react-router-dom";
+import remarkBreaks from "remark-breaks";
+import remarkGfm from "remark-gfm";
 import { setStepDone, type Note } from "../api";
 import { codeLanguage, deadlineText, KINDS, planProgress, preview } from "../notes";
+
+/** Note text or an AI answer as Markdown. A single Enter still starts a new line, as in plain text. */
+export function Markdown({ text }: { text: string }) {
+  return (
+    <div className="markdown">
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}
+        components={{ a: ({ node, ...props }) => <a {...props} target="_blank" rel="noreferrer" /> }}>
+        {text}
+      </ReactMarkdown>
+    </div>
+  );
+}
 
 export function Progress({ done, total, text }: { done: number; total: number; text?: string }) {
   return (
