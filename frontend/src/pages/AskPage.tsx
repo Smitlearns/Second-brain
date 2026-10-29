@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { MessageSquare, Plus, Send, Sparkles, Trash2 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import * as api from "../api";
 import type { Chat, Message, Note } from "../api";
@@ -117,16 +118,20 @@ export default function AskPage() {
     <main className="wide">
       <div className="chat-layout">
         <aside className="chat-list">
-          <button type="button" className="new-chat" onClick={startChat}>+ New chat</button>
+          <button type="button" className="new-chat" onClick={startChat}><Plus size={16} aria-hidden /> New chat</button>
           {chats.map((c) => (
-            <Link key={c.id} to={`/ask/${c.id}`} className={c.id === chatId ? "active" : undefined}>{c.title}</Link>
+            <Link key={c.id} to={`/ask/${c.id}`} className={c.id === chatId ? "active" : undefined} title={c.title}>
+              <MessageSquare size={14} aria-hidden /><span>{c.title}</span>
+            </Link>
           ))}
         </aside>
 
         <section className="chat-main">
           <div className="chat-top">
             <h1>Ask your brain</h1>
-            <button type="button" className="secondary" onClick={removeChat}>Delete chat</button>
+            <button type="button" className="icon-button" onClick={removeChat} aria-label="Delete chat" title="Delete chat">
+              <Trash2 size={16} aria-hidden />
+            </button>
           </div>
 
           {focus && (
@@ -142,7 +147,13 @@ export default function AskPage() {
                 {m.sources.length > 0 && <small>From your notes: {m.sources.join(", ")}</small>}
               </div>
             ))}
-            {!messages.length && <p className="empty">Ask anything. Answers use the notes you saved.</p>}
+            {!messages.length && (
+              <div className="chat-empty">
+                <span className="chat-empty-icon"><Sparkles size={22} aria-hidden /></span>
+                <strong>Ask anything</strong>
+                <small>Answers come from the notes you saved.</small>
+              </div>
+            )}
           </div>
 
           {focus && (
@@ -158,7 +169,7 @@ export default function AskPage() {
           <form className="chat-form" onSubmit={submit}>
             <input ref={input} type="text" value={question} onChange={(e) => setQuestion(e.target.value)}
               placeholder="Ask your doubt..." aria-label="Your question" autoComplete="off" required autoFocus />
-            <button type="submit" disabled={busy}>Send</button>
+            <button type="submit" disabled={busy} aria-label="Send" title="Send"><Send size={16} aria-hidden /></button>
           </form>
         </section>
       </div>

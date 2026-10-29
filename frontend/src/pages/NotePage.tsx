@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import * as api from "../api";
 import type { Note, NoteFields } from "../api";
-import { CodeBlock, Markdown, noteLabel, noteLink, Progress, Steps, Tags } from "../components/bits";
+import { ArrowLeft, MessageCircle, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
+import { CodeBlock, Markdown, noteLink, Progress, Steps, Tags } from "../components/bits";
+import { KindIcon, NoteLabel } from "../components/icons";
 import NoteForm from "../components/NoteForm";
-import { codeLanguage, deadlineText, fieldsFrom, fullDate, KIND_LIST, KINDS, planProgress } from "../notes";
+import { codeLanguage, dayText, deadlineText, fieldsFrom, fullDate, KIND_LIST, KINDS, planProgress } from "../notes";
 
 /** One note, laid out for its type, with edit, pin, delete and "Ask about this note". */
 export default function NotePage() {
@@ -59,14 +61,14 @@ export default function NotePage() {
 
   return (
     <main className="note-page">
-      <button type="button" className="link" onClick={back}>← Back to all notes</button>
+      <button type="button" className="link" onClick={back}><ArrowLeft size={16} aria-hidden /> Back to all notes</button>
 
       {editing ? (
         <>
           {problem && <p className="error">{problem}</p>}
           <label className="field">Type
             <select value={editing.kind} onChange={(e) => setEditing({ ...editing, kind: e.target.value as Note["kind"] })}>
-              {KIND_LIST.map((k) => <option key={k} value={k}>{KINDS[k].icon} {KINDS[k].label}</option>)}
+              {KIND_LIST.map((k) => <option key={k} value={k}>{KINDS[k].label}</option>)}
             </select>
           </label>
           <NoteForm fields={editing} onChange={setEditing} onSubmit={save} submitLabel="Save changes"
@@ -74,25 +76,30 @@ export default function NotePage() {
         </>
       ) : (
         <>
-          <small className="eyebrow">{KINDS[note.kind].icon} {KINDS[note.kind].label}{note.pinned && "  ·  📌 Pinned"}</small>
+          <small className="eyebrow with-icon">
+            <KindIcon kind={note.kind} size={13} /> {KINDS[note.kind].label}
+            {note.pinned && <><span aria-hidden>·</span><Pin size={13} aria-hidden /> Pinned</>}
+          </small>
           <NoteBody note={note} onChange={setNote} />
           <Tags tags={note.tags} />
           <small>Saved {fullDate(note.created_at)}</small>
 
           <div className="buttons note-actions">
-            <button type="button" className="secondary" onClick={() => setEditing(fieldsFrom(note))}>Edit</button>
-            <button type="button" className="secondary" onClick={() => api.setPinned(id, !note.pinned).then(setNote)}>
-              {note.pinned ? "Unpin" : "Pin"}
+            <button type="button" onClick={askAbout}><MessageCircle size={16} aria-hidden /> Ask about this note</button>
+            <button type="button" className="secondary" onClick={() => setEditing(fieldsFrom(note))}>
+              <Pencil size={15} aria-hidden /> Edit
             </button>
-            <button type="button" onClick={askAbout}>💬 Ask about this note</button>
-            <button type="button" className="delete" onClick={remove}>Delete</button>
+            <button type="button" className="secondary" onClick={() => api.setPinned(id, !note.pinned).then(setNote)}>
+              {note.pinned ? <><PinOff size={15} aria-hidden /> Unpin</> : <><Pin size={15} aria-hidden /> Pin</>}
+            </button>
+            <button type="button" className="delete" onClick={remove}><Trash2 size={15} aria-hidden /> Delete</button>
           </div>
 
           {related.length > 0 && (
             <section>
               <h2>Related notes</h2>
               <div className="stack">
-                {related.map((r) => <Link key={r.id} to={noteLink(r.id)}>{noteLabel(r)}</Link>)}
+                {related.map((r) => <Link key={r.id} to={noteLink(r.id)} className="related"><NoteLabel note={r} /></Link>)}
               </div>
             </section>
           )}
@@ -106,7 +113,7 @@ function NoteBody({ note, onChange }: { note: Note; onChange: (note: Note) => vo
   if (note.kind === "idea") {
     return (
       <>
-        <h1>💡 {note.title}</h1>
+        <h1>{note.title}</h1>
         {note.body && <div className="card kind-idea"><strong>Why it matters</strong><Markdown text={note.body} /></div>}
       </>
     );
@@ -120,7 +127,7 @@ function NoteBody({ note, onChange }: { note: Note; onChange: (note: Note) => vo
         <h1>{note.title}</h1>
         <div className="metrics">
           <div className="metric"><small>Steps done</small><strong>{total ? `${done}/${total}` : "No steps"}</strong></div>
-          <div className="metric"><small>Deadline</small><strong>{note.extra.deadline || "None"}</strong></div>
+          <div className="metric"><small>Deadline</small><strong>{note.extra.deadline ? dayText(note.extra.deadline) : "None"}</strong></div>
           {due && <div className="metric"><small>Time left</small><strong>{due.replace("due ", "")}</strong></div>}
         </div>
         {total > 0 && <><Progress done={done} total={total} /><Steps note={note} onChange={onChange} /></>}

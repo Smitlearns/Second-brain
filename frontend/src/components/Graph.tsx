@@ -6,7 +6,8 @@ import { getLinks, type Kind, type Link, type Note } from "../api";
 import { themeColor, useTheme } from "../theme";
 import { noteLink } from "./bits";
 
-const KIND_COLORS: Record<Kind, string> = { note: "#4f7cff", idea: "#f2c94c", plan: "#4caf7d", code: "#bb6bd9" };
+// the same colours as the type icons in style.css
+const KIND_COLORS: Record<Kind, string> = { note: "blue", idea: "yellow", plan: "green", code: "purple" };
 
 /** How notes connect: lines for shared tags, dashed lines for similar content. Click a note to open it. */
 export default function Graph({ notes }: { notes: Note[] }) {
@@ -26,7 +27,7 @@ export default function Graph({ notes }: { notes: Note[] }) {
       id: n.id,
       label: n.title.slice(0, 30),
       title: `${n.title}\n${n.tags.map((t) => "#" + t).join(", ")}`,
-      color: KIND_COLORS[n.kind],
+      color: themeColor(KIND_COLORS[n.kind]),
       size: n.pinned ? 22 : 14,
     })));
     const edges = new DataSet(links.map((l, i) => ({

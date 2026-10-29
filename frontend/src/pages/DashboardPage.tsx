@@ -2,18 +2,23 @@ import { lazy, Suspense, useEffect, useMemo, useState, type FormEvent } from "re
 import { Link, useSearchParams } from "react-router-dom";
 import * as api from "../api";
 import type { Note, Stats } from "../api";
-import { CodeBlock, NoteCard, noteLabel, noteLink, Progress, Steps, Tags } from "../components/bits";
+import {
+  AlarmClock, CalendarDays, CircleCheck, CodeXml, FileText, LayoutGrid, Lightbulb, Map as MapIcon, MessageSquare,
+  Network, Pin, Plus, Sparkles, type LucideIcon,
+} from "lucide-react";
+import { CodeBlock, NoteCard, noteLink, Progress, Steps, Tags } from "../components/bits";
+import { KindIcon, NoteLabel } from "../components/icons";
 // the graph library is big, so it only loads when the Graph section is opened
 const Graph = lazy(() => import("../components/Graph"));
 import { codeLanguage, deadlineText, DUE_SOON_DAYS, duePlans, KIND_LIST, KINDS, planProgress, preview } from "../notes";
 
-const SECTIONS = {
-  all: "🗂️ All",
-  notes: "📝 Notes",
-  ideas: "💡 Ideas",
-  plans: "🗺️ Plans",
-  code: "💻 Code",
-  graph: "🕸️ Graph",
+const SECTIONS: Record<string, [string, LucideIcon]> = {
+  all: ["All", LayoutGrid],
+  notes: ["Notes", FileText],
+  ideas: ["Ideas", Lightbulb],
+  plans: ["Plans", MapIcon],
+  code: ["Code", CodeXml],
+  graph: ["Graph", Network],
 };
 type Section = keyof typeof SECTIONS;
 
@@ -41,18 +46,27 @@ export default function DashboardPage() {
   const props = { notes, replaceNote, reload };
   return (
     <main className="wide">
-      <h1>Dashboard</h1>
+      <header className="page-head">
+        <div>
+          <p className="eyebrow">{greeting()}</p>
+          <h1>Your second brain</h1>
+        </div>
+        <Link to="/" className="button"><Plus size={16} aria-hidden /> New note</Link>
+      </header>
       {stats && <CommandCenter notes={notes} stats={stats} />}
       <DueSoon notes={notes} />
 
       <div className="pills" role="tablist" aria-label="Section">
-        {(Object.keys(SECTIONS) as Section[]).map((s) => (
-          <button key={s} type="button" role="tab" aria-selected={s === section}
-            className={s === section ? "pill active" : "pill"}
-            onClick={() => setParams(s === "all" ? {} : { section: s }, { replace: true })}>
-            {SECTIONS[s]}
-          </button>
-        ))}
+        {(Object.keys(SECTIONS) as Section[]).map((s) => {
+          const [label, Icon] = SECTIONS[s];
+          return (
+            <button key={s} type="button" role="tab" aria-selected={s === section}
+              className={s === section ? "pill active" : "pill"}
+              onClick={() => setParams(s === "all" ? {} : { section: s }, { replace: true })}>
+              <Icon size={15} aria-hidden /> {label}
+            </button>
+          );
+        })}
       </div>
 
       {section === "notes" && <NotesOnly {...props} />}
@@ -63,6 +77,11 @@ export default function DashboardPage() {
       {section === "all" && <All {...props} />}
     </main>
   );
+}
+
+function greeting() {
+  const hour = new Date().getHours();
+  return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 }
 
 interface SectionProps {
@@ -77,18 +96,21 @@ function CommandCenter({ notes, stats }: { notes: Note[]; stats: Stats }) {
   const topTags = [...tagCounts].sort((a, b) => b[1] - a[1]).slice(0, 8);
   const byKind = KIND_LIST.map((k) => [k, notes.filter((n) => n.kind === k).length] as const).filter(([, c]) => c);
 
-  const metrics: [string, number][] = [
-    ["Notes", stats.notes],
-    ["Added this week", stats.this_week],
-    ["Pinned", stats.pinned],
-    ["Chats", stats.chats],
-    ["Questions asked", stats.questions],
+  const metrics: [string, number, LucideIcon][] = [
+    ["Notes", stats.notes, FileText],
+    ["Added this week", stats.this_week, CalendarDays],
+    ["Pinned", stats.pinned, Pin],
+    ["Chats", stats.chats, MessageSquare],
+    ["Questions asked", stats.questions, Sparkles],
   ];
   return (
     <>
       <div className="metrics">
-        {metrics.map(([label, value]) => (
-          <div key={label} className="metric"><small>{label}</small><strong>{value}</strong></div>
+        {metrics.map(([label, value, Icon]) => (
+          <div key={label} className="metric">
+            <small className="with-icon"><Icon size={14} aria-hidden /> {label}</small>
+            <strong>{value}</strong>
+          </div>
         ))}
       </div>
       <div className="split">
@@ -99,7 +121,7 @@ function CommandCenter({ notes, stats }: { notes: Note[]; stats: Stats }) {
         </div>
         <div className="chips">
           <small>By type</small>
-          {byKind.map(([k, c]) => <span key={k} className="chip">{KINDS[k].icon} {KINDS[k].label} <b>{c}</b></span>)}
+          {byKind.map(([k, c]) => <span key={k} className="chip"><KindIcon kind={k} size={11} /> {KINDS[k].label} <b>{c}</b></span>)}
         </div>
       </div>
     </>
@@ -112,7 +134,7 @@ function DueSoon({ notes }: { notes: Note[] }) {
   if (!due.length) return null;
   return (
     <section className="card due-soon" aria-label="Plans due soon">
-      <strong>⏰ Due in the next {DUE_SOON_DAYS} days or overdue</strong>
+      <strong className="with-icon"><AlarmClock size={16} aria-hidden /> Due in the next {DUE_SOON_DAYS} days or overdue</strong>
       <ul>
         {due.map((n) => {
           const text = deadlineText(n);
@@ -203,7 +225,7 @@ function Ideas({ notes, reload }: SectionProps) {
         <div className="grid three">
           {ideas.map((n) => (
             <article key={n.id} className="card kind-idea">
-              <Link to={noteLink(n.id)} className="card-title idea-title">{noteLabel(n)}</Link>
+              <Link to={noteLink(n.id)} className="card-title idea-title"><NoteLabel note={n} /></Link>
               {n.body && <p className="card-text">{preview(n.body, 150)}</p>}
             </article>
           ))}
@@ -232,7 +254,7 @@ function Plans({ notes, replaceNote }: SectionProps) {
         return (
           <article key={n.id} className="card kind-plan">
             <Link to={noteLink(n.id)} className="card-title">
-              {noteLabel(n)}{total > 0 && done === total ? " ✅" : ""}
+              <NoteLabel note={n} />{total > 0 && done === total && <CircleCheck size={16} className="done-check" aria-label="Done" />}
             </Link>
             {total > 0 && <Progress done={done} total={total} text={`${done}/${total} steps done`} />}
             {due && <small className={due.startsWith("overdue") ? "error" : undefined}>{due}</small>}
@@ -270,7 +292,7 @@ function CodeSnippets({ notes }: SectionProps) {
       <div className="stack">
         {shown.map((n) => (
           <details key={n.id} className="card kind-code">
-            <summary>💻 {n.title} · {codeLanguage(n)}</summary>
+            <summary><span className="note-label"><KindIcon kind="code" /> {n.title}</span> <span className="chip">{codeLanguage(n)}</span></summary>
             <CodeBlock code={n.body} />
             <Tags tags={n.tags} />
             <Link to={noteLink(n.id)}>Open</Link>

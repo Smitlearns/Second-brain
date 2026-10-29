@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { setStepDone, type Note } from "../api";
-import { codeLanguage, deadlineText, fullDate, KINDS, planFinished, planProgress, preview, shortDate } from "../notes";
+import { codeLanguage, deadlineText, fullDate, planFinished, planProgress, preview, shortDate } from "../notes";
+import { NoteLabel } from "./icons";
 
 /** Note text or an AI answer as Markdown. A single Enter still starts a new line, as in plain text. */
 export function Markdown({ text }: { text: string }) {
@@ -77,16 +78,14 @@ export function CardMeta({ note }: { note: Note }) {
 
 export const noteLink = (id: number) => `/dashboard/notes/${id}`;
 
-export const noteLabel = (n: Note) => `${n.pinned ? "📌 " : ""}${KINDS[n.kind].icon} ${n.title}`;
-
 /** One note in a list. Each type shows what matters most for it. */
 export function NoteCard({ note: n }: { note: Note }) {
   const { done, total } = planProgress(n);
   const due = deadlineText(n);
-  const steps = planFinished(n) ? "✅ All steps done" : `${done}/${total} steps done`;
+  const steps = planFinished(n) ? "All steps done" : `${done}/${total} steps done`;
   return (
     <article className={`card note-card kind-${n.kind}`}>
-      <Link to={noteLink(n.id)} className="card-title">{noteLabel(n)}</Link>
+      <Link to={noteLink(n.id)} className="card-title"><NoteLabel note={n} /></Link>
       {n.kind === "idea" && n.body && <p className="card-text">{preview(n.body)}</p>}
       {n.kind === "plan" && (total
         ? <Progress done={done} total={total} text={`${steps}${due ? ` · ${due}` : ""}`} />

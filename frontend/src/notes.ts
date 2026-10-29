@@ -1,11 +1,12 @@
 import type { Kind, Note, NoteFields } from "./api";
 
 // Keep these in step with KINDS and LANGUAGES in app/database.py
-export const KINDS: Record<Kind, { icon: string; label: string }> = {
-  note: { icon: "📝", label: "Note" },
-  idea: { icon: "💡", label: "Idea" },
-  plan: { icon: "🗺️", label: "Plan" },
-  code: { icon: "💻", label: "Code" },
+// the icons are in components/icons.tsx
+export const KINDS: Record<Kind, { label: string }> = {
+  note: { label: "Note" },
+  idea: { label: "Idea" },
+  plan: { label: "Plan" },
+  code: { label: "Code" },
 };
 
 export const KIND_LIST = Object.keys(KINDS) as Kind[];
@@ -107,6 +108,12 @@ export function shortDate(stamp: string) {
 export function fullDate(stamp: string) {
   const date = new Date(stamp.replace(" ", "T") + "Z");
   return Number.isNaN(date.getTime()) ? stamp : date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+/** A YYYY-MM-DD deadline as "2 Oct 2026". */
+export function dayText(day: string) {
+  const date = new Date(day + "T00:00:00");
+  return Number.isNaN(date.getTime()) ? day : date.toLocaleDateString(undefined, { dateStyle: "medium" });
 }
 
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();

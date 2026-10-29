@@ -1,5 +1,7 @@
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+import "@fontsource-variable/inter";
+import { Brain, Moon, Sun } from "lucide-react";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { getNotes } from "./api";
 import { duePlans } from "./notes";
@@ -24,7 +26,7 @@ function App() {
     <>
       <header className="topbar">
         <nav className="nav">
-          <Link to="/dashboard" className="brand">🧠 <span className="brand-name">Second Brain</span></Link>
+          <Link to="/dashboard" className="brand"><span className="brand-mark"><Brain size={18} aria-hidden /></span><span className="brand-name">Second Brain</span></Link>
           <NavLink to="/" end>Notes</NavLink>
           <NavLink to="/ask">Ask</NavLink>
           <NavLink to="/dashboard">
@@ -33,7 +35,7 @@ function App() {
           </NavLink>
           <button type="button" className="theme-toggle" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}>
-            {theme === "dark" ? "☀️" : "🌙"}<span className="toggle-label">{theme === "dark" ? " Light" : " Dark"}</span>
+            {theme === "dark" ? <Sun size={16} aria-hidden /> : <Moon size={16} aria-hidden />}<span className="toggle-label">{theme === "dark" ? "Light" : "Dark"}</span>
           </button>
         </nav>
       </header>
