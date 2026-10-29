@@ -72,6 +72,8 @@ def init_db():
 
 def clean_tags(text):
     """Turn "Python, ideas , python" into "python,ideas"."""
+    if isinstance(text, list):  # the old JSON API sends ["python", "ideas"]
+        text = ",".join(text)
     tags = []
     for tag in (text or "").split(","):
         tag = tag.strip().lower()
@@ -102,6 +104,15 @@ def make_extra(kind, steps="", deadline="", language="", old_steps=None):
     if kind == "code":
         return {"language": language if language in LANGUAGES else "other"}
     return {}
+
+
+def check_note(kind, title, body):
+    """What's missing from a note before it can be saved, or None if it's fine."""
+    # ideas and plans can be saved without a body, notes and code can't
+    kind = _kind(kind)  # an unknown type is saved as a note, so check it like one
+    if not title or (kind in ("note", "code") and not body):
+        return "Please fill in the title and the text."
+    return None
 
 
 def full_text(note):

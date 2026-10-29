@@ -1,46 +1,38 @@
-from flask import Flask, Response, redirect, render_template, request, url_for
+from flask import Flask, Response, jsonify, redirect, request
 
 from app import database, importer
-from app.static_files import static_url
 
-flask_app = Flask(__name__, template_folder="templates")
-flask_app.jinja_env.globals["static_url"] = static_url
+flask_app = Flask(__name__)
 flask_app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024  # imports up to 25 MB
 database.init_db()
 
 
-@flask_app.route("/")
-def home():
-    kind = request.args.get("kind", "note")
-    return render_template(
-        "capture.html",
-        kinds=database.KINDS,
-        kind=kind if kind in database.KINDS else "note",
-        languages=database.LANGUAGES,
-        saved=request.args.get("saved"),
-        imported=request.args.get("imported"),
-        problems=request.args.getlist("problem"),
-    )
+@flask_app.get("/")
+def old_notes_page():
+    return redirect("/")  # the Notes page is part of the React app now
 
 
-@flask_app.route("/add", methods=["POST"])
+@flask_app.post("/notes")
 def add():
-    form = request.form
+    """Save a note from the Notes page. Plan steps come in as text, one per line."""
+    form = request.get_json(silent=True)
+    fields = ("kind", "title", "body", "tags", "steps", "deadline", "language")
+    if not isinstance(form, dict) or not all(isinstance(form.get(f, ""), str) for f in fields):
+        return jsonify(error="Send the note as a JSON object of text fields."), 400
     kind = form.get("kind", "note")
     title = form.get("title", "").strip()
     body = form.get("body", "").strip()
 
-    # ideas and plans can be saved without a body, notes and code can't
-    if not title or (kind in ("note", "code") and not body):
-        return redirect(url_for("home", kind=kind, problem="Please fill in the title and the text."))
+    problem = database.check_note(kind, title, body)
+    if problem:
+        return jsonify(error=problem), 400
 
     extra = database.make_extra(kind, form.get("steps", ""), form.get("deadline", ""), form.get("language", ""))
-    database.add_note(title, body, form.get("tags", ""), kind, extra)
-    # stay on the same type, so saving several ideas in a row is quick
-    return redirect(url_for("home", kind=kind, saved=1))
+    note_id = database.add_note(title, body, form.get("tags", ""), kind, extra)
+    return jsonify(id=note_id), 201
 
 
-@flask_app.route("/import", methods=["POST"])
+@flask_app.post("/import")
 def import_files():
     count, problems = 0, []
     for file in request.files.getlist("files"):
@@ -54,10 +46,10 @@ def import_files():
         for n in notes:
             database.add_note(n["title"], n["body"], n["tags"], n["kind"], n["extra"])
         count += len(notes)
-    return redirect(url_for("home", imported=count, problem=problems))
+    return jsonify(imported=count, problems=problems)
 
 
-@flask_app.route("/export")
+@flask_app.get("/export")
 def export():
     parts = []
     for n in database.get_notes():
