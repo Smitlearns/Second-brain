@@ -8,7 +8,7 @@ import { themeColor, useTheme } from "../theme";
 import { noteLink } from "./bits";
 
 // the same colours as the type icons in style.css
-const KIND_COLORS: Record<Kind, string> = { note: "blue", idea: "yellow", plan: "green", code: "purple" };
+const KIND_COLORS: Record<Kind, string> = { note: "blue", idea: "yellow", plan: "green" };
 
 /** How notes connect: lines for shared tags, dashed lines for similar content. Click a note to open it. */
 export default function Graph({ notes }: { notes: Note[] }) {
@@ -54,7 +54,7 @@ export default function Graph({ notes }: { notes: Note[] }) {
       <small>
         {links ? `${links.length} connections. ` : "Finding connections... "}
         Solid lines share a tag, dashed lines mean similar content. Drag notes around, scroll to zoom, hover for
-        details, double-click to open. Blue is a note, yellow an idea, green a plan, purple code. Pinned notes are bigger.
+        details, double-click to open. Blue is a note, yellow an idea, green a plan. Pinned notes are bigger.
       </small>
       <div ref={box} className="graph" />
     </>

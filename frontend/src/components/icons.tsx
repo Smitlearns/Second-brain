@@ -1,10 +1,10 @@
-import { CodeXml, FileText, Lightbulb, Map as MapIcon, Pin, type LucideIcon } from "lucide-react";
+import { FileText, Lightbulb, Map as MapIcon, Pin, type LucideIcon } from "lucide-react";
 import type { Kind, Note } from "../api";
 import { KINDS } from "../notes";
 
-export const KIND_ICONS: Record<Kind, LucideIcon> = { note: FileText, idea: Lightbulb, plan: MapIcon, code: CodeXml };
+export const KIND_ICONS: Record<Kind, LucideIcon> = { note: FileText, idea: Lightbulb, plan: MapIcon };
 
-/** The type of a note as a small tile in its colour: blue note, yellow idea, green plan, purple code. */
+/** The type of a note as a small tile in its colour: blue note, yellow idea, green plan. */
 export function KindIcon({ kind, size = 15 }: { kind: Kind; size?: number }) {
   const Icon = KIND_ICONS[kind];
   return <span className={`kind-icon k-${kind}`} role="img" aria-label={KINDS[kind].label}><Icon size={size} /></span>;

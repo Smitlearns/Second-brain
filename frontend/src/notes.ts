@@ -1,36 +1,29 @@
 import type { Kind, Note, NoteFields } from "./api";
 
-// Keep these in step with KINDS and LANGUAGES in app/database.py
+// Keep these in step with KINDS in app/database.py
 // the icons are in components/icons.tsx
 export const KINDS: Record<Kind, { label: string }> = {
   note: { label: "Note" },
   idea: { label: "Idea" },
   plan: { label: "Plan" },
-  code: { label: "Code" },
 };
 
 export const KIND_LIST = Object.keys(KINDS) as Kind[];
-
-export const LANGUAGES = [
-  "python", "javascript", "typescript", "html", "css", "sql", "bash", "java", "c", "cpp", "other",
-];
 
 export const TITLE_LABELS: Record<Kind, string> = {
   note: "Title",
   idea: "Your idea in one line",
   plan: "Goal, e.g. Finish the FastAPI course",
-  code: "What does this code do?",
 };
 
 export const BODY_LABELS: Record<Kind, string> = {
   note: "Write your note...",
   idea: "Why it matters (optional)",
   plan: "Details (optional)",
-  code: "Paste your code...",
 };
 
 export const emptyFields = (kind: Kind): NoteFields => ({
-  kind, title: "", body: "", tags: "", steps: "", deadline: "", language: "python",
+  kind, title: "", body: "", tags: "", steps: "", deadline: "",
 });
 
 /** The form fields for editing an existing note. */
@@ -41,7 +34,6 @@ export const fieldsFrom = (note: Note): NoteFields => ({
   tags: note.tags.join(", "),
   steps: (note.extra.steps ?? []).map((s) => s.text).join("\n"),
   deadline: note.extra.deadline ?? "",
-  language: note.extra.language ?? "other",
 });
 
 /** Markdown without its symbols, for short previews: "**Big** [idea](url)" becomes "Big idea". */
@@ -134,4 +126,3 @@ export function deadlineText(note: Note) {
   return `overdue by ${-days} day${days < -1 ? "s" : ""}`;
 }
 
-export const codeLanguage = (note: Note) => note.extra.language ?? "other";

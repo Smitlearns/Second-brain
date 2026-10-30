@@ -150,7 +150,7 @@ button.link:hover { color: var(--text); filter: none; }
 .icon-button.danger:hover { color: var(--red); }
 .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 
-/* Small rounded labels: tags, languages, counts */
+/* Small rounded labels: tags, counts */
 .chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .chip {
   display: inline-flex;
@@ -170,12 +170,10 @@ button.link:hover { color: var(--text); filter: none; }
 .k-note { --k: var(--blue); }
 .k-idea { --k: var(--yellow); }
 .k-plan { --k: var(--green); }
-.k-code { --k: var(--purple); }
 /* ...and as a stripe down the left of its cards and form */
 .kind-note, .form-note { border-left: 4px solid var(--blue); }
 .kind-idea, .form-idea { border-left: 4px solid var(--yellow); }
 .kind-plan, .form-plan { border-left: 4px solid var(--green); }
-.kind-code, .form-code { border-left: 4px solid var(--purple); }
 .kind-icon {
   display: inline-grid;
   place-items: center;
@@ -241,7 +239,6 @@ button.link:hover { color: var(--text); filter: none; }
 .row { display: flex; gap: 8px; }
 .row input { flex: 1; min-width: 0; }
 .big { font-size: 1.15rem; padding: 14px; }
-.code, .code-block { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.88rem; tab-size: 4; }
 .field { display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 0.88rem; font-weight: 500; margin-bottom: 12px; }
 .card .field { margin-bottom: 0; }
 
@@ -300,19 +297,6 @@ progress::-moz-progress-bar { background: var(--green); border-radius: 999px; }
 .steps .done { color: var(--muted); text-decoration: line-through; }
 
 details summary { cursor: pointer; color: var(--muted); }
-details.card summary { color: var(--text); font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 8px; list-style: none; }
-details.card summary::-webkit-details-marker { display: none; }
-
-.code-block {
-  margin: 0;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px 14px;
-  overflow-x: auto;
-  line-height: 1.5;
-}
-.code-block .ln { display: inline-block; width: 2.5em; color: var(--muted); opacity: 0.6; user-select: none; }
 
 .graph { height: 560px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; margin-top: 10px; }
 

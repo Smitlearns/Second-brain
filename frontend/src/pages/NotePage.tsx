@@ -3,10 +3,10 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import * as api from "../api";
 import type { Note, NoteFields } from "../api";
 import { ArrowLeft, MessageCircle, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
-import { CodeBlock, Markdown, noteLink, Progress, Steps, Tags } from "../components/bits";
+import { Markdown, noteLink, Progress, Steps, Tags } from "../components/bits";
 import { KindIcon, NoteLabel } from "../components/icons";
 import NoteForm from "../components/NoteForm";
-import { codeLanguage, dayText, deadlineText, fieldsFrom, fullDate, KIND_LIST, KINDS, planProgress } from "../notes";
+import { dayText, deadlineText, fieldsFrom, fullDate, KIND_LIST, KINDS, planProgress } from "../notes";
 
 /** One note, laid out for its type, with edit, pin, delete and "Ask about this note". */
 export default function NotePage() {
@@ -132,16 +132,6 @@ function NoteBody({ note, onChange }: { note: Note; onChange: (note: Note) => vo
         </div>
         {total > 0 && <><Progress done={done} total={total} /><Steps note={note} onChange={onChange} /></>}
         {note.body && <><strong>Details</strong><Markdown text={note.body} /></>}
-      </>
-    );
-  }
-
-  if (note.kind === "code") {
-    return (
-      <>
-        <h1>{note.title}</h1>
-        <small>Language: {codeLanguage(note)}</small>
-        <CodeBlock code={note.body} />
       </>
     );
   }

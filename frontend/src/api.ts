@@ -1,6 +1,6 @@
 // Everything the React app asks the server for. /flask/... is the Flask app, /api/... is FastAPI.
 
-export type Kind = "note" | "idea" | "plan" | "code";
+export type Kind = "note" | "idea" | "plan";
 
 export interface Step {
   text: string;
@@ -15,7 +15,7 @@ export interface Note {
   kind: Kind;
   pinned: boolean;
   created_at: string;
-  extra: { steps?: Step[]; deadline?: string; language?: string };
+  extra: { steps?: Step[]; deadline?: string };
 }
 
 /** What the note forms send. Plan steps are one per line, tags are comma separated. */
@@ -26,7 +26,6 @@ export interface NoteFields {
   tags: string;
   steps: string;
   deadline: string;
-  language: string;
 }
 
 export interface Stats {

@@ -6,18 +6,17 @@ import {
   AlarmClock, CalendarDays, CircleCheck, FileText, LayoutGrid, MessageSquare,
   Network, Pin, Plus, Sparkles, type LucideIcon,
 } from "lucide-react";
-import { CodeBlock, NoteCard, noteLink, Progress, Steps, Tags } from "../components/bits";
+import { NoteCard, noteLink, Progress, Steps } from "../components/bits";
 import { KIND_ICONS, KindIcon, NoteLabel } from "../components/icons";
 // the graph library is big, so it only loads when the Graph section is opened
 const Graph = lazy(() => import("../components/Graph"));
-import { codeLanguage, deadlineText, DUE_SOON_DAYS, duePlans, KIND_LIST, KINDS, planProgress, preview } from "../notes";
+import { deadlineText, DUE_SOON_DAYS, duePlans, KIND_LIST, KINDS, planProgress, preview } from "../notes";
 
 const SECTIONS = {
   all: ["All", LayoutGrid],
   notes: ["Notes", KIND_ICONS.note],
   ideas: ["Ideas", KIND_ICONS.idea],
   plans: ["Plans", KIND_ICONS.plan],
-  code: ["Code", KIND_ICONS.code],
   graph: ["Graph", Network],
 } satisfies Record<string, [string, LucideIcon]>;
 type Section = keyof typeof SECTIONS;
@@ -73,7 +72,6 @@ export default function DashboardPage() {
       {section === "notes" && <NotesOnly {...props} />}
       {section === "ideas" && <Ideas {...props} />}
       {section === "plans" && <Plans {...props} />}
-      {section === "code" && <CodeSnippets {...props} />}
       {section === "graph" && <Suspense fallback={<p className="empty">Loading graph...</p>}><Graph notes={notes} /></Suspense>}
       {section === "all" && <All {...props} />}
     </main>
@@ -178,10 +176,15 @@ function All({ notes }: SectionProps) {
   }, [notes]);
 
   useEffect(() => {
-    if (!search.trim()) return setFound(null);
+    const q = search.trim();
+    if (!q) return setFound(null);
+    let cancelled = false; // a slow answer for an older search mustn't replace a newer one
     // wait until typing pauses, instead of searching on every key
-    const timer = setTimeout(() => api.searchNotes(search.trim()).then(setFound), 250);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => api.searchNotes(q).then((r) => !cancelled && setFound(r), () => {}), 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [search]);
 
   const shown = (found ?? notes).filter((n) => picked.every((t) => n.tags.includes(t)));
@@ -214,19 +217,27 @@ function NotesOnly({ notes }: SectionProps) {
 
 function Ideas({ notes, reload }: SectionProps) {
   const [idea, setIdea] = useState("");
+  const [problem, setProblem] = useState("");
   const ideas = notes.filter((n) => n.kind === "idea");
 
   // quick add, so an idea can be saved without leaving the Dashboard
   async function add(e: FormEvent) {
     e.preventDefault();
     if (!idea.trim()) return;
-    await api.addNote({ kind: "idea", title: idea.trim(), body: "", tags: "", steps: "", deadline: "", language: "" });
+    try {
+      await api.addNote({ kind: "idea", title: idea.trim(), body: "", tags: "", steps: "", deadline: "" });
+    } catch (err) {
+      setProblem((err as Error).message);
+      return;
+    }
+    setProblem("");
     setIdea("");
     reload();
   }
 
   return (
     <>
+      {problem && <p className="error">{problem}</p>}
       <form onSubmit={add} className="row quick-add">
         <input type="text" value={idea} onChange={(e) => setIdea(e.target.value)}
           placeholder="Got an idea? Type it in one line" aria-label="New idea" />
@@ -282,34 +293,3 @@ function Plans({ notes, replaceNote }: SectionProps) {
   );
 }
 
-function CodeSnippets({ notes }: SectionProps) {
-  const [language, setLanguage] = useState<string | null>(null);
-  const snippets = notes.filter((n) => n.kind === "code");
-  if (!snippets.length) return <Empty what="code snippet" />;
-
-  const languages = [...new Set(snippets.map(codeLanguage))].sort();
-  const shown = language ? snippets.filter((n) => codeLanguage(n) === language) : snippets;
-
-  return (
-    <>
-      {languages.length > 1 && (
-        <div className="tag-filter" aria-label="Language">
-          {languages.map((l) => (
-            <button key={l} type="button" className={l === language ? "tag active" : "tag"} aria-pressed={l === language}
-              onClick={() => setLanguage(l === language ? null : l)}>{l}</button>
-          ))}
-        </div>
-      )}
-      <div className="stack">
-        {shown.map((n) => (
-          <details key={n.id} className="card kind-code">
-            <summary><span className="note-label"><KindIcon kind="code" /> {n.title}</span> <span className="chip">{codeLanguage(n)}</span></summary>
-            <CodeBlock code={n.body} />
-            <Tags tags={n.tags} />
-            <Link to={noteLink(n.id)}>Open</Link>
-          </details>
-        ))}
-      </div>
-    </>
-  );
-}

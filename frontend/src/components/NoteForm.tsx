@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { NoteFields } from "../api";
-import { BODY_LABELS, LANGUAGES, TITLE_LABELS } from "../notes";
+import { BODY_LABELS, TITLE_LABELS } from "../notes";
 
 interface Props {
   fields: NoteFields;
@@ -31,19 +31,12 @@ export default function NoteForm({ fields, onChange, onSubmit, submitLabel, onCa
     <input type="text" value={fields.title} onChange={set("title")} placeholder={TITLE_LABELS[kind]}
       aria-label={TITLE_LABELS[kind]} className={kind === "idea" ? "big" : undefined} required />
   );
-  // ideas and plans can be saved without a body, notes and code can't
-  const bodyRequired = kind === "note" || kind === "code";
+  // ideas and plans can be saved without a body, notes can't
+  const bodyRequired = kind === "note";
 
   return (
     <form onSubmit={submit} className={`card form-${kind}`}>
-      {kind === "code" ? (
-        <div className="row">
-          {title}
-          <select value={fields.language} onChange={set("language")} aria-label="Language">
-            {LANGUAGES.map((lang) => <option key={lang} value={lang}>{lang}</option>)}
-          </select>
-        </div>
-      ) : title}
+      {title}
 
       {kind === "plan" && (
         <>
@@ -58,8 +51,7 @@ export default function NoteForm({ fields, onChange, onSubmit, submitLabel, onCa
       )}
 
       <textarea value={fields.body} onChange={set("body")} placeholder={BODY_LABELS[kind]} aria-label={BODY_LABELS[kind]}
-        rows={{ note: 6, idea: 3, plan: 2, code: 10 }[kind]} className={kind === "code" ? "code" : undefined}
-        spellCheck={kind !== "code"} required={bodyRequired} />
+        rows={{ note: 6, idea: 3, plan: 2 }[kind]} required={bodyRequired} />
       <input type="text" value={fields.tags} onChange={set("tags")} placeholder="Tags, separated by commas (optional)"
         aria-label="Tags" />
 

@@ -6,7 +6,7 @@ import { KIND_ICONS } from "../components/icons";
 import NoteForm from "../components/NoteForm";
 import { emptyFields, KIND_LIST, KINDS } from "../notes";
 
-const SAVE_LABELS: Record<Kind, string> = { note: "Save note", idea: "Save idea", plan: "Save plan", code: "Save snippet" };
+const SAVE_LABELS: Record<Kind, string> = { note: "Save note", idea: "Save idea", plan: "Save plan" };
 
 /** Add notes of each type, import files and download everything. Saving goes to Flask. */
 export default function NotesPage() {
