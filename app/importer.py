@@ -27,7 +27,8 @@ def notes_from_file(filename, data):
     notes = []
     for section in sections:
         section["tags"] += ",imported"
-        if section["kind"] != "note":  # plans and code stay in one piece
+        # plans, and code from older exports, stay in one piece so a ``` block is never cut in two
+        if section["kind"] != "note" or section["body"].startswith("```"):
             notes.append(section)
             continue
         parts = _split(section["body"].strip())
@@ -44,14 +45,18 @@ def _section(title, body, tags="", kind="note", extra=None):
 
 
 def _markdown_sections(text, fallback_title):
-    """Split on "# Heading" lines. Also reads the app's own export (Type:/Tags: lines, steps, code)."""
+    """Split on "# Heading" lines. Also reads the app's own export (Type:/Tags: lines, steps)."""
     sections = []
     title, lines = fallback_title, []
 
     def finish():
-        body_lines = [l for l in lines if l.strip() != "---"]
+        body_lines = list(lines)
+        # the "---" the export puts between notes; a "---" inside a note stays
+        last = next((i for i in reversed(range(len(body_lines))) if body_lines[i].strip()), None)
+        if last is not None and body_lines[last].strip() == "---":
+            body_lines.pop(last)
         details = {}
-        # "Type: code", "Tags: a, b", "Language: python", "Deadline: ..." right under the heading
+        # "Type: plan", "Tags: a, b", "Deadline: ..." right under the heading ("Language:" is from old exports)
         while True:
             first = next((i for i, l in enumerate(body_lines) if l.strip()), None)
             match = first is not None and re.match(r"(Type|Tags|Language|Deadline): (.*)", body_lines[first])
@@ -73,10 +78,12 @@ def _markdown_sections(text, fallback_title):
                 "deadline": details.get("Deadline", ""),
             }
             body_lines = [l for l, m in zip(body_lines, steps) if not m]
-        body = "\n".join(body_lines).strip()
         if kind == "code":
-            body = re.sub(r"^```[\w+-]*\n|\n?```$", "", body)  # drop the ``` fences
-            extra = {"language": details.get("Language", "other")}
+            kind = "note"  # older exports had a code type; its ``` block is kept as an ordinary note
+        else:
+            # the export writes "# " lines inside a note as "\# " so they don't start a new note
+            body_lines = [l[1:] if l.startswith("\\# ") else l for l in body_lines]
+        body = "\n".join(body_lines).strip()
 
         if body or kind in ("idea", "plan"):  # ideas and plans can be just a title
             sections.append(_section(title, body, details.get("Tags", ""), kind, extra))

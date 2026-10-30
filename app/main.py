@@ -44,7 +44,6 @@ class NoteIn(BaseModel):
     kind: str = "note"
     steps: str = ""  # plans: one step per line
     deadline: str = ""  # plans: YYYY-MM-DD
-    language: str = ""  # code
 
 
 @api.get("/notes")
@@ -70,7 +69,7 @@ def edit_note(note_id: int, note: NoteIn):
     if problem:
         raise HTTPException(status_code=400, detail=problem)
     # steps that were ticked stay ticked after an edit
-    extra = database.make_extra(note.kind, note.steps, note.deadline, note.language, old["extra"].get("steps"))
+    extra = database.make_extra(note.kind, note.steps, note.deadline, old["extra"].get("steps"))
     database.update_note(note_id, title, body, note.tags, note.kind, extra)
     return database.get_note(note_id)
 
@@ -138,10 +137,8 @@ def list_chats():
 @api.post("/chats")
 def new_chat():
     # reuse an empty chat instead of piling up blank ones
-    for c in database.get_chats():
-        if c["note_id"] is None and not database.get_messages(c["id"]):
-            return {"id": c["id"]}
-    return {"id": database.create_chat()}
+    empty = database.get_empty_chat()
+    return {"id": empty if empty is not None else database.create_chat()}
 
 
 @api.post("/chats/about/{note_id}")
@@ -259,12 +256,16 @@ class OldNoteIn(BaseModel):
     body: str
     tags: list[str] = []
     kind: str = "note"
-    extra: dict = {}  # plan: {"steps": [{"text", "done"}], "deadline"}, code: {"language"}
+    extra: dict = {}  # plan: {"steps": [{"text", "done"}], "deadline"}
 
 
 @app.post("/notes", tags=["old API"])
 def old_create_note(note: OldNoteIn):
-    note_id = database.add_note(note.title, note.body, note.tags, note.kind, note.extra)
+    title, body = note.title.strip(), note.body.strip()
+    problem = database.check_note(note.kind, title, body)
+    if problem:
+        raise HTTPException(status_code=400, detail=problem)
+    note_id = database.add_note(title, body, note.tags, note.kind, note.extra)
     return {"id": note_id, "message": "Note saved"}
 
 

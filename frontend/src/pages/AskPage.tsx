@@ -43,6 +43,9 @@ export default function AskPage() {
   useEffect(() => {
     if (chatId === null) return;
     let cancelled = false; // a slow answer for the previous chat mustn't show up in this one
+    // don't leave the previous chat's messages and note suggestions up while this one loads
+    setMessages([]);
+    setFocus(null);
     api.getChats().then(setChats);
     api.getChat(chatId).then(
       (details) => {

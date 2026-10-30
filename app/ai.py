@@ -36,7 +36,7 @@ def _note_text(note):
 
 
 def _for_prompt(note):
-    kind = database.KINDS[note["kind"]].split()[-1]  # "Plan", "Code", ...
+    kind = database.KINDS[note["kind"]].split()[-1]  # "Note", "Idea", "Plan"
     return f"{kind}: {note['title']}\n{database.full_text(note)}"
 
 
@@ -125,7 +125,11 @@ def related_notes(note_id, limit=3):
 def connections():
     """Every pair of notes that is linked, for the knowledge graph: (id_a, id_b, how)."""
     notes = database.get_notes()
-    vectors = ensure_embeddings()
+    # scale each vector to length 1 once, so each pair below is a plain dot product
+    vectors = {}
+    for note_id, v in ensure_embeddings().items():
+        size = math.sqrt(sum(x * x for x in v))
+        vectors[note_id] = [x / size for x in v] if size else v
     links = []
     for i, a in enumerate(notes):
         for b in notes[i + 1:]:
@@ -133,7 +137,7 @@ def connections():
             if shared:
                 links.append((a["id"], b["id"], "tag: " + ", ".join(sorted(shared))))
             elif a["id"] in vectors and b["id"] in vectors:
-                score = similarity(vectors[a["id"]], vectors[b["id"]])
+                score = sum(x * y for x, y in zip(vectors[a["id"]], vectors[b["id"]]))
                 if score >= MIN_RELATED_MATCH:
                     links.append((a["id"], b["id"], f"similar ({score:.0%})"))
     return links

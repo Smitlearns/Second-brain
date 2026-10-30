@@ -5,8 +5,7 @@ from pathlib import Path
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "notes.db"
 
 # The kinds of note you can save, and how they are shown
-KINDS = {"note": "📝 Note", "idea": "💡 Idea", "plan": "🗺️ Plan", "code": "💻 Code"}
-LANGUAGES = ["python", "javascript", "typescript", "html", "css", "sql", "bash", "java", "c", "cpp", "other"]
+KINDS = {"note": "📝 Note", "idea": "💡 Idea", "plan": "🗺️ Plan"}
 
 
 def get_connection():
@@ -39,8 +38,15 @@ def init_db():
         _add_column(conn, "notes", "kind", "TEXT NOT NULL DEFAULT 'note'")
         _add_column(conn, "notes", "pinned", "INTEGER NOT NULL DEFAULT 0")
         _add_column(conn, "notes", "embedding", "TEXT")  # filled in by the AI when needed
-        # fields only some types have: plan steps and deadline, code language
+        # fields only plans have: steps and deadline
         _add_column(conn, "notes", "extra", "TEXT NOT NULL DEFAULT '{}'")
+        # there used to be a "code" type; its snippets become notes with the code in a ``` block
+        conn.execute("""
+            UPDATE notes
+            SET kind = 'note', extra = '{}', embedding = NULL,
+                body = '```' || coalesce(nullif(json_extract(extra, '$.language'), 'other'), '') || char(10) || body || char(10) || '```'
+            WHERE kind = 'code'
+        """)
 
         conn.execute("""
             CREATE TABLE IF NOT EXISTS chats (
@@ -95,36 +101,32 @@ def _kind(kind):
     return kind if kind in KINDS else "note"
 
 
-def make_extra(kind, steps="", deadline="", language="", old_steps=None):
+def make_extra(kind, steps="", deadline="", old_steps=None):
     """Build the type-specific fields from a form. Steps that were ticked stay ticked after an edit."""
     if kind == "plan":
         done = {s["text"] for s in old_steps or [] if s["done"]}
         lines = [line.strip().lstrip("-*").strip() for line in steps.splitlines()]
         return {"steps": [{"text": l, "done": l in done} for l in lines if l], "deadline": deadline or ""}
-    if kind == "code":
-        return {"language": language if language in LANGUAGES else "other"}
     return {}
 
 
 def check_note(kind, title, body):
     """What's missing from a note before it can be saved, or None if it's fine."""
-    # ideas and plans can be saved without a body, notes and code can't
+    # ideas and plans can be saved without a body, notes can't
     kind = _kind(kind)  # an unknown type is saved as a note, so check it like one
-    if not title or (kind in ("note", "code") and not body):
+    if not title or (kind == "note" and not body):
         return "Please fill in the title and the text."
     return None
 
 
 def full_text(note):
-    """Everything worth searching in a note, including plan steps and code language."""
+    """Everything worth searching in a note, including plan steps."""
     extra = note["extra"]
     parts = [note["body"]]
     if extra.get("steps"):
         parts.append("Steps: " + "; ".join(s["text"] for s in extra["steps"]))
     if extra.get("deadline"):
         parts.append("Deadline: " + extra["deadline"])
-    if extra.get("language"):
-        parts.append("Language: " + extra["language"])
     return "\n".join(p for p in parts if p)
 
 
@@ -156,14 +158,17 @@ def get_notes(tag=None):
 
 
 def search_notes(query):
-    with get_connection() as conn:
-        like = f"%{query}%"
-        rows = conn.execute(
-            "SELECT * FROM notes WHERE title LIKE ? OR body LIKE ? OR tags LIKE ? OR extra LIKE ? "
-            "ORDER BY pinned DESC, id DESC",
-            (like, like, like, like),
-        ).fetchall()
-        return [_note(row) for row in rows]
+    """Notes whose title, text, tags, plan steps or deadline contain the query."""
+    # searched here rather than with LIKE on the extra column, which would also match its JSON keys
+    # ("steps", "done", ...) and treat % and _ as wildcards
+    query = query.lower()
+
+    def text(n):
+        extra = n["extra"]
+        steps = [s["text"] for s in extra.get("steps", [])]
+        return " ".join([n["title"], n["body"], *n["tags"], *steps, extra.get("deadline", "")])
+
+    return [n for n in get_notes() if query in text(n).lower()]
 
 
 def delete_note(note_id):
@@ -191,12 +196,15 @@ def update_note(note_id, title, body, tags="", kind="note", extra=None):
 
 def set_step_done(note_id, index, done):
     """Tick or untick one step of a plan."""
-    note = get_note(note_id)
-    steps = note["extra"].get("steps", []) if note else []
-    if 0 <= index < len(steps):
-        steps[index]["done"] = done
-        with get_connection() as conn:
-            conn.execute("UPDATE notes SET extra = ? WHERE id = ?", (json.dumps(note["extra"]), note_id))
+    with get_connection() as conn:
+        # read and write in one locked transaction, so two quick ticks can't undo each other
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("SELECT extra FROM notes WHERE id = ?", (note_id,)).fetchone()
+        extra = json.loads(row["extra"]) if row else {}
+        steps = extra.get("steps", [])
+        if 0 <= index < len(steps):
+            steps[index]["done"] = done
+            conn.execute("UPDATE notes SET extra = ? WHERE id = ?", (json.dumps(extra), note_id))
 
 
 def set_pinned(note_id, pinned):
@@ -237,6 +245,17 @@ def get_chats():
     with get_connection() as conn:
         rows = conn.execute("SELECT * FROM chats ORDER BY id DESC").fetchall()
         return [dict(row) for row in rows]
+
+
+def get_empty_chat():
+    """The newest chat with no messages that isn't about a note, or None."""
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT id FROM chats WHERE note_id IS NULL "
+            "AND NOT EXISTS (SELECT 1 FROM messages WHERE messages.chat_id = chats.id) "
+            "ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        return row["id"] if row else None
 
 
 def get_chat(chat_id):

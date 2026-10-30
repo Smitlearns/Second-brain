@@ -1,3 +1,5 @@
+import re
+
 from flask import Flask, Response, jsonify, redirect, request
 
 from app import database, importer
@@ -16,7 +18,7 @@ def old_notes_page():
 def add():
     """Save a note from the Notes page. Plan steps come in as text, one per line."""
     form = request.get_json(silent=True)
-    fields = ("kind", "title", "body", "tags", "steps", "deadline", "language")
+    fields = ("kind", "title", "body", "tags", "steps", "deadline")
     if not isinstance(form, dict) or not all(isinstance(form.get(f, ""), str) for f in fields):
         return jsonify(error="Send the note as a JSON object of text fields."), 400
     kind = form.get("kind", "note")
@@ -27,7 +29,7 @@ def add():
     if problem:
         return jsonify(error=problem), 400
 
-    extra = database.make_extra(kind, form.get("steps", ""), form.get("deadline", ""), form.get("language", ""))
+    extra = database.make_extra(kind, form.get("steps", ""), form.get("deadline", ""))
     note_id = database.add_note(title, body, form.get("tags", ""), kind, extra)
     return jsonify(id=note_id), 201
 
@@ -59,14 +61,11 @@ def export():
             details += f"Type: {n['kind']}\n"
         if n["tags"]:
             details += f"Tags: {', '.join(n['tags'])}\n"
-        if extra.get("language"):
-            details += f"Language: {extra['language']}\n"
         if extra.get("deadline"):
             details += f"Deadline: {extra['deadline']}\n"
 
-        body = n["body"]
-        if n["kind"] == "code":
-            body = f"```{extra.get('language', '')}\n{body}\n```"
+        # a "# Heading" inside a note would start a new note when the file is imported again
+        body = re.sub(r"(?m)^# ", r"\\# ", n["body"])
         if extra.get("steps"):
             steps = "\n".join(f"- [{'x' if s['done'] else ' '}] {s['text']}" for s in extra["steps"])
             body = f"{body}\n\n{steps}" if body else steps
